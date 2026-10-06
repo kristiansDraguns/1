@@ -5,6 +5,8 @@ const state = {
   tf: "1d",
   series: {},
   lines: [],
+  circles: [],
+  circleScale: null,
   view: null,
   drag: null,
   hover: null,
@@ -209,9 +211,11 @@ function draw() {
   ctx.clip();
   drawCandles();
   drawLines();
+  drawCircles();
   drawDots();
   ctx.restore();
   drawLineLabels();
+  drawCircleLabels();
   drawAxes();
   drawCrosshair();
   drawLastTag();
@@ -396,6 +400,112 @@ function drawDots() {
       ctx.stroke();
     }
   }
+  if (!state.circleScale) return;
+  for (const circle of state.circles) {
+    const g = circleGeom(circle);
+    for (const touch of circle.touches) {
+      const bt = barOpen(touch.t);
+      if (bt < state.view.t0 - TF_SEC[state.tf] || bt > state.view.t1) continue;
+      const x = xOf(bt);
+      const y = yOf(touch.p);
+      ctx.beginPath();
+      ctx.fillStyle = circle.color;
+      ctx.arc(x, y, 2.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+function circleGeom(circle) {
+  const line = state.lines.find((item) => item.id === circle.lineId);
+  const [tA, tB] = circle.anchors;
+  const pA = priceOnLine(line, tA);
+  const pB = priceOnLine(line, tB);
+  const tc = (tA + tB) / 2;
+  const lc = (Math.log(pA) + Math.log(pB)) / 2;
+  const { sx, sy } = state.circleScale;
+  const r1 = Math.hypot((tA - tc) / sx, (Math.log(pA) - lc) / sy);
+  return { line, tA, tB, tc, lc, r1, sx, sy };
+}
+
+function ringPricesAt(g, level, t) {
+  const dt = (t - g.tc) / g.sx;
+  const rem = level * g.r1 * (level * g.r1) - dt * dt;
+  if (rem < 0) return null;
+  const dlp = Math.sqrt(rem) * g.sy;
+  return [Math.exp(g.lc + dlp), Math.exp(g.lc - dlp)];
+}
+
+function nearestRingPrice(g, level, t, p) {
+  const pair = ringPricesAt(g, level, t);
+  if (!pair) return null;
+  return Math.abs(Math.log(p) - Math.log(pair[0])) < Math.abs(Math.log(p) - Math.log(pair[1]))
+    ? pair[0]
+    : pair[1];
+}
+
+function drawRing(g, level, faint) {
+  const steps = 220;
+  ctx.beginPath();
+  let started = false;
+  for (let i = 0; i <= steps; i++) {
+    const theta = (i / steps) * Math.PI * 2;
+    const rad = level * g.r1;
+    const t = g.tc + Math.cos(theta) * rad * g.sx;
+    const p = Math.exp(g.lc + Math.sin(theta) * rad * g.sy);
+    const x = xOf(t);
+    const y = yOf(p);
+    if (!started) {
+      ctx.moveTo(x, y);
+      started = true;
+    } else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.globalAlpha = faint ? 0.28 : 0.9;
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+function drawCircles() {
+  if (!state.circleScale) return;
+  for (const circle of state.circles) {
+    const g = circleGeom(circle);
+    ctx.strokeStyle = circle.color;
+    ctx.lineWidth = 1.25;
+    ctx.setLineDash([5, 4]);
+    for (const level of circle.show) drawRing(g, level, false);
+    for (const level of circle.faint) drawRing(g, level, true);
+    ctx.setLineDash([]);
+    for (const t of circle.anchors) {
+      const x = xOf(t);
+      const y = yOf(priceOnLine(g.line, t));
+      ctx.strokeStyle = circle.color;
+      ctx.lineWidth = 1.4;
+      ctx.strokeRect(x - 3.5, y - 3.5, 7, 7);
+    }
+  }
+}
+
+function drawCircleLabels() {
+  if (!state.circleScale || !state.view) return;
+  const w = plot();
+  ctx.font = "11px ui-sans-serif, system-ui, sans-serif";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  const tLabel = state.view.t0 + (state.view.t1 - state.view.t0) * 0.72;
+  for (const circle of state.circles) {
+    const g = circleGeom(circle);
+    for (const level of circle.show) {
+      const pair = ringPricesAt(g, level, tLabel);
+      if (!pair) continue;
+      const p = pair[0] > pair[1] ? pair[0] : pair[1];
+      const y = yOf(p);
+      const x = xOf(tLabel);
+      if (y < w.y + 10 || y > w.y + w.h - 10) continue;
+      ctx.fillStyle = circle.color;
+      ctx.fillText(String(level), x + 4, y);
+    }
+  }
 }
 
 function drawAxes() {
@@ -463,10 +573,22 @@ function renderSide() {
   const purple = byId.purple;
   const yellow = byId.yellow;
   const rel = (row) => `${fmtPrice(row.lp)}, ${Math.abs(row.gap).toFixed(1)}% ${row.gap >= 0 ? "below" : "above"} the close`;
+  const yellowNow = state.circles.find((c) => c.id === "yellow-now");
+  let ringNote = "";
+  if (yellowNow && state.circleScale) {
+    const g = circleGeom(yellowNow);
+    const upper = ringPricesAt(g, 0.618, last.t);
+    if (upper) {
+      const ring = Math.max(upper[0], upper[1]);
+      const gap = (px / ring - 1) * 100;
+      ringNote =
+        ` The yellow 0.618 ring is ${fmtPrice(ring)}, ${Math.abs(gap).toFixed(1)}% ${gap >= 0 ? "below" : "above"} the close. ` +
+        `That ring capped the 21 Sep and 2 Oct highs.`;
+    }
+  }
   document.getElementById("read").textContent =
-    `The blue ceiling is ${rel(blue)}. Purple support is ${rel(purple)}. The yellow floor is ${rel(yellow)}. ` +
-    `The 21 Sep high turned at the ceiling, and the 2 Oct high stopped short of it. Purple was tagged on 2 Sep. ` +
-    `Yellow was resistance on 21 Jul after the break, then support again on the 20 Aug reclaim.`;
+    `The blue ceiling is ${rel(blue)}. Purple support is ${rel(purple)}. The yellow floor is ${rel(yellow)}.` +
+    ringNote;
 
   const box = document.getElementById("lines");
   box.innerHTML = "";
@@ -498,9 +620,36 @@ function renderSide() {
     card.addEventListener("mouseleave", () => { state.active = null; draw(); });
     box.appendChild(card);
   }
+  const circlesBox = document.getElementById("circles");
+  if (circlesBox) {
+    circlesBox.innerHTML = "";
+    let circleWorst = 0;
+    for (const circle of state.circles) {
+      const g = state.circleScale ? circleGeom(circle) : null;
+      const card = document.createElement("article");
+      card.className = "card";
+      const h2 = document.createElement("h2");
+      h2.innerHTML = `<span class="swatch swatch-ring" style="border-color:${circle.color}"></span>${circle.name}`;
+      const why = document.createElement("p");
+      why.className = "why";
+      why.textContent = circle.why;
+      const ul = document.createElement("ul");
+      for (const touch of circle.touches) {
+        const ring = g ? nearestRingPrice(g, touch.level, touch.t, touch.p) : touch.p;
+        const err = ring ? (touch.p / ring - 1) * 100 : 0;
+        circleWorst = Math.max(circleWorst, Math.abs(err));
+        const li = document.createElement("li");
+        li.innerHTML = `${touch.label} · ${touch.level} ${touch.role} <span class="err">${err >= 0 ? "+" : ""}${err.toFixed(2)}%</span>`;
+        ul.appendChild(li);
+      }
+      card.append(h2, why, ul);
+      circlesBox.appendChild(card);
+    }
+    worst = Math.max(worst, circleWorst);
+  }
   const audit = document.getElementById("audit");
-  audit.textContent = `Claimed touches stay on the fixed slope. Largest gap is ${worst.toFixed(2)}%. Pan and timeframe switches do not move the slope.`;
-  audit.style.color = worst > 0.6 ? "#ef5d6c" : "#8b9aab";
+  audit.textContent = `Claimed touches stay on the fixed slope and the fixed rings. Largest gap is ${worst.toFixed(2)}%. Pan and timeframe switches do not move them.`;
+  audit.style.color = worst > 0.8 ? "#ef5d6c" : "#8b9aab";
 }
 
 function wire() {
@@ -611,16 +760,19 @@ function parseSeries(doc) {
 
 async function main() {
   wire();
-  const [d1, h4, h1, linesDoc] = await Promise.all([
+  const [d1, h4, h1, linesDoc, circlesDoc] = await Promise.all([
     fetch("data/btc-1d.json").then((r) => r.json()),
     fetch("data/btc-4h.json").then((r) => r.json()),
     fetch("data/btc-1h.json").then((r) => r.json()),
     fetch("data/lines.json").then((r) => r.json()),
+    fetch("data/circles.json").then((r) => r.json()),
   ]);
   state.series["1d"] = parseSeries(d1);
   state.series["4h"] = parseSeries(h4);
   state.series["1h"] = parseSeries(h1);
   state.lines = linesDoc.lines;
+  state.circles = circlesDoc.circles;
+  state.circleScale = circlesDoc.scale;
   const params = new URLSearchParams(location.search);
   const tf = params.get("tf");
   if (tf && state.series[tf]) {

@@ -1,0 +1,150 @@
+{
+  "scale": {
+    "sx": 472217.14285714284,
+    "sy": 0.011929290061112346,
+    "note": "Seconds and log-price per pixel on the macro frame used to place the circles: 1 Apr 2014 through the last daily bar, padded like the chart, on an 840 by 692 plot. The rings are circles in that fixed frame, so panning and switching 1D, 4H, and 1H do not move them off these prices."
+  },
+  "circles": [
+    {
+      "id": "purple-rings",
+      "lineId": "purple",
+      "name": "Purple rings",
+      "color": "#c792ea",
+      "anchors": [1705795200, 1808006400],
+      "show": [0.5, 0.618],
+      "faint": [0.786],
+      "touches": [
+        {
+          "t": 1752476400,
+          "p": 123120,
+          "level": 0.618,
+          "role": "resistance",
+          "label": "14 Jul 2025 high"
+        },
+        {
+          "t": 1755140400,
+          "p": 123640,
+          "level": 0.618,
+          "role": "resistance",
+          "label": "14 Aug 2025 high"
+        },
+        {
+          "t": 1760130000,
+          "p": 103310,
+          "level": 0.5,
+          "role": "support",
+          "label": "10 Oct 2025 low"
+        },
+        {
+          "t": 1768420800,
+          "p": 97850,
+          "level": 0.5,
+          "role": "resistance",
+          "label": "14 Jan 2026 high"
+        },
+        {
+          "t": 1778065200,
+          "p": 82818,
+          "level": 0.5,
+          "role": "resistance",
+          "label": "6 May 2026 high"
+        }
+      ],
+      "why": "Both handles sit on the purple rising support. The 0.618 ring is resistance at the 14 Jul 2025 and 14 Aug 2025 highs. The 0.5 ring is support at the 10 Oct 2025 low, then resistance at the 14 Jan 2026 high and the 6 May 2026 high. The 0.786 ring is the next one out."
+    },
+    {
+      "id": "blue-rings",
+      "lineId": "blue",
+      "name": "Blue rings",
+      "color": "#6cb6ff",
+      "anchors": [1717372800, 1784332800],
+      "show": [0.5, 0.618],
+      "faint": [],
+      "touches": [
+        {
+          "t": 1737352800,
+          "p": 109590,
+          "level": 0.618,
+          "role": "resistance",
+          "label": "20 Jan 2025 high"
+        },
+        {
+          "t": 1747933200,
+          "p": 111880,
+          "level": 0.5,
+          "role": "resistance",
+          "label": "22 May 2025 high"
+        },
+        {
+          "t": 1754179200,
+          "p": 112210,
+          "level": 0.5,
+          "role": "support",
+          "label": "3 Aug 2025 low"
+        },
+        {
+          "t": 1755140400,
+          "p": 123640,
+          "level": 0.618,
+          "role": "resistance",
+          "label": "14 Aug 2025 high"
+        },
+        {
+          "t": 1768420800,
+          "p": 97850,
+          "level": 0.618,
+          "role": "resistance",
+          "label": "14 Jan 2026 high"
+        },
+        {
+          "t": 1770336000,
+          "p": 60100,
+          "level": 0.618,
+          "role": "support",
+          "label": "6 Feb 2026 low"
+        }
+      ],
+      "why": "Both handles sit on the blue ceiling. One 0.618 ring is resistance on 20 Jan 2025, 14 Aug 2025, and 14 Jan 2026, then support at the 6 Feb 2026 low. The 0.5 ring is resistance on 22 May 2025 and support on 3 Aug 2025. By October 2026 those inner rings no longer cross the current bar."
+    },
+    {
+      "id": "yellow-now",
+      "lineId": "yellow",
+      "name": "Yellow rings",
+      "color": "#f0c14d",
+      "anchors": [1778457600, 1801353600],
+      "show": [0.236, 0.618],
+      "faint": [0.786],
+      "touches": [
+        {
+          "t": 1787198400,
+          "p": 69183,
+          "level": 0.236,
+          "role": "support",
+          "label": "20 Aug 2026 low"
+        },
+        {
+          "t": 1788343200,
+          "p": 76321,
+          "level": 0.236,
+          "role": "support",
+          "label": "2 Sep 2026 low"
+        },
+        {
+          "t": 1790020800,
+          "p": 87392,
+          "level": 0.618,
+          "role": "resistance",
+          "label": "21 Sep 2026 high"
+        },
+        {
+          "t": 1790942400,
+          "p": 87197,
+          "level": 0.618,
+          "role": "resistance",
+          "label": "2 Oct 2026 high"
+        }
+      ],
+      "why": "A second construction, on the yellow cycle floor, sized for the current path. The 0.236 ring is support at the 20 Aug reclaim and the 2 Sep low. The 0.618 ring is the ceiling at the 21 Sep high and the 2 Oct high. The 0.786 ring is the next one above that."
+    }
+  ]
+}

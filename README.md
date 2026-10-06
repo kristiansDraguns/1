@@ -1,6 +1,6 @@
 # BTC trend lines
 
-Log-scale Bitfinex BTCUSD chart with the three trend lines kept from the OpticalArt trendline method (repeated support and resistance on one slope, anchored on wicks, checked against older price, and still relevant to the October 2026 price).
+Log-scale Bitfinex BTCUSD chart with the three trend lines kept from the OpticalArt trendline method, and fib circles whose handles sit on those lines. A ring is kept when the same circle level meets more than one wick. Log scale stays on.
 
 ```bash
 python3 -m http.server 8765
