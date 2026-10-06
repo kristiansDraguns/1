@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BTC trend lines · 6 Oct 2026</title>
+  <link rel="stylesheet" href="css/chart.css">
+</head>
+<body>
+  <header>
+    <div class="title">
+      <strong>BTCUSD</strong>
+      <span class="muted">Bitfinex</span>
+      <span class="badge">LOG</span>
+    </div>
+    <div class="tools" role="toolbar" aria-label="Chart controls">
+      <div class="group" id="tf">
+        <button type="button" data-tf="1d" class="active">1D</button>
+        <button type="button" data-tf="4h">4H</button>
+        <button type="button" data-tf="1h">1H</button>
+      </div>
+      <div class="group" id="views">
+        <button type="button" data-view="macro">Macro</button>
+        <button type="button" data-view="y2022">2022–</button>
+        <button type="button" data-view="y2026">2026</button>
+        <button type="button" data-view="fit">Fit</button>
+      </div>
+    </div>
+    <div class="hint">Drag to pan · scroll to zoom · lines stay on their prices</div>
+  </header>
+  <main>
+    <div id="stage">
+      <canvas id="chart"></canvas>
+      <div id="loading">Loading Bitfinex BTC candles…</div>
+    </div>
+    <aside id="legend">
+      <h1>Trend lines</h1>
+      <p class="asof" id="asof"></p>
+      <div id="read"></div>
+      <div id="lines"></div>
+      <p class="foot" id="audit"></p>
+      <p class="foot">Lines that only mattered in a crash, or that cut through price without repeated support and resistance, were left off. Color is only so the lines can be told apart.</p>
+    </aside>
+  </main>
+  <script src="js/chart.js"></script>
+</body>
+</html>
