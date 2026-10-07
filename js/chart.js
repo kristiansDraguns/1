@@ -126,13 +126,18 @@ function fitAll() {
   fitPrice();
 }
 
+function finishedChannels() {
+  const want = ["yellow-up", "purple-up"];
+  return want.map((id) => state.channels.find((ch) => ch.id === id)).filter(Boolean);
+}
+
 function frameChannels() {
-  const t0 = Date.UTC(2022, 5, 1) / 1000;
-  const t1 = Date.UTC(2027, 0, 20) / 1000;
+  const t0 = Date.UTC(2022, 10, 1) / 1000;
+  const t1 = Date.UTC(2026, 9, 20) / 1000;
   let lo = Infinity;
   let hi = -Infinity;
-  for (const ch of state.channels) {
-    for (const level of channelLevelsOf(ch)) {
+  for (const ch of finishedChannels()) {
+    for (const level of [0, 1]) {
       for (const t of [t0, t1]) {
         const p = channelPrice(ch, level, t);
         if (p < lo) lo = p;
@@ -140,7 +145,7 @@ function frameChannels() {
       }
     }
   }
-  const pad = 0.06;
+  const pad = 0.04;
   state.view = {
     t0,
     t1,
@@ -241,13 +246,10 @@ function draw() {
   ctx.beginPath();
   ctx.rect(w.x, w.y, w.w, w.h);
   ctx.clip();
+  drawChannelFills();
   drawCandles();
-  drawChannels();
-  drawCircles();
-  drawDots();
+  drawChannelEdges();
   ctx.restore();
-  drawChannelLabels();
-  drawCircleLabels();
   drawAxes();
   drawCrosshair();
   drawLastTag();
@@ -425,27 +427,51 @@ function channelLevelsOf(ch) {
   return ch.show || state.channelLevels.map((item) => item.ratio);
 }
 
-function drawChannels() {
-  const order = ["purple-below", "purple-back", "yellow-up", "purple-up"];
-  const channels = state.channels.slice().sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
-  for (const ch of channels) {
-    for (const level of channelLevelsOf(ch)) {
-      ctx.strokeStyle = levelColor(level);
-      ctx.lineWidth = level === 0 || level === 0.618 || level === 1 ? 2.15 : 1.7;
-      ctx.globalAlpha = 0.95;
+function bandFill(ratio) {
+  if (ratio >= 0.618) return "#6cb6ff";
+  if (ratio >= 0.5) return "#3cba7a";
+  if (ratio >= 0.382) return "#e15a6a";
+  return "#9aa3ad";
+}
+
+function drawChannelFills() {
+  const t0 = state.view.t0;
+  const t1 = state.view.t1;
+  for (const ch of finishedChannels()) {
+    const levels = channelLevelsOf(ch).slice().sort((a, b) => a - b);
+    for (let i = 0; i < levels.length - 1; i++) {
+      const a = levels[i];
+      const b = levels[i + 1];
       ctx.beginPath();
-      ctx.moveTo(xOf(state.view.t0), yOf(channelPrice(ch, level, state.view.t0)));
-      ctx.lineTo(xOf(state.view.t1), yOf(channelPrice(ch, level, state.view.t1)));
+      ctx.moveTo(xOf(t0), yOf(channelPrice(ch, a, t0)));
+      ctx.lineTo(xOf(t1), yOf(channelPrice(ch, a, t1)));
+      ctx.lineTo(xOf(t1), yOf(channelPrice(ch, b, t1)));
+      ctx.lineTo(xOf(t0), yOf(channelPrice(ch, b, t0)));
+      ctx.closePath();
+      ctx.fillStyle = bandFill(a);
+      ctx.globalAlpha = 0.34;
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawChannelEdges() {
+  const t0 = state.view.t0;
+  const t1 = state.view.t1;
+  for (const ch of finishedChannels()) {
+    const levels = channelLevelsOf(ch).slice().sort((a, b) => a - b);
+    for (const level of levels) {
+      ctx.beginPath();
+      ctx.strokeStyle = level === 0.618 || level === 1 ? "#6cb6ff" : bandFill(level);
+      ctx.globalAlpha = 0.9;
+      ctx.lineWidth = level === 0 || level === 1 ? 1.6 : 1.15;
+      ctx.moveTo(xOf(t0), yOf(channelPrice(ch, level, t0)));
+      ctx.lineTo(xOf(t1), yOf(channelPrice(ch, level, t1)));
       ctx.stroke();
     }
-    ctx.globalAlpha = 1;
-    if (!ch.anchor) continue;
-    const x = xOf(ch.anchor.t);
-    const y = yOf(ch.anchor.p);
-    ctx.strokeStyle = levelColor(ch.anchor.level);
-    ctx.lineWidth = 1.6;
-    ctx.strokeRect(x - 4, y - 4, 8, 8);
   }
+  ctx.globalAlpha = 1;
 }
 
 function drawChannelLabels() {
@@ -666,9 +692,11 @@ function renderSide() {
     const yRed = channelPrice(yellowCh, 0.382, spot.t);
     const p0 = channelPrice(purpleCh, 0, spot.t);
     const pRed = channelPrice(purpleCh, 0.382, spot.t);
+    const yBand = px >= y0 && px < yRed ? "gray band" : px < y0 ? "under the gray band" : "above the gray band";
+    const pBand = px >= p0 && px < pRed ? "gray band" : px < p0 ? "under the gray band" : "above the gray band";
     read +=
-      ` On the flatter channel the gray base is ${placeLine(px, y0)} and the red 0.382 is ${placeLine(px, yRed)}.` +
-      ` On the steeper channel the gray base is ${placeLine(px, p0)} and the red 0.382 is ${placeLine(px, pRed)}.`;
+      ` It sits in the ${yBand} of the flatter channel (base ${placeLine(px, y0)}, red band begins at ${placeLine(px, yRed)}).` +
+      ` It sits in the ${pBand} of the steeper channel (base ${placeLine(px, p0)}, red band begins at ${placeLine(px, pRed)}).`;
   }
   document.getElementById("read").textContent = read;
 
@@ -682,11 +710,11 @@ function renderSide() {
     h2.innerHTML = `<span class="swatch" style="background:${row.color}"></span>${row.name} ${row.ratio}`;
     const why = document.createElement("p");
     why.className = "why";
-    if (row.ratio === 0) why.textContent = "Base. This is the trend line, hidden once the gray level sits on it.";
-    else if (row.ratio === 0.618) why.textContent = "Aqua. The next channel starts on this line.";
-    else if (row.ratio === 1) why.textContent = "Blue. The width of the channel is pulled out to this rail.";
-    else if (row.ratio === 0.382) why.textContent = "Red. First level up from the gray base.";
-    else why.textContent = "Green. Halfway from the base to the blue rail.";
+    if (row.ratio === 0) why.textContent = "Gray band, from the base up to 0.382. The base is the hidden trend line.";
+    else if (row.ratio === 0.382) why.textContent = "Red band, from 0.382 to 0.5.";
+    else if (row.ratio === 0.5) why.textContent = "Green band, from 0.5 to 0.618.";
+    else if (row.ratio === 0.618) why.textContent = "Blue band starts here and runs to the 1.0 rail.";
+    else why.textContent = "Blue rail. Top of the blue band.";
     card.append(h2, why);
     box.appendChild(card);
   }
@@ -720,7 +748,7 @@ function renderSide() {
   const channelsBox = document.getElementById("channels");
   if (channelsBox) {
     channelsBox.innerHTML = "";
-    for (const ch of state.channels) {
+    for (const ch of finishedChannels()) {
       const card = document.createElement("article");
       card.className = "card";
       const h2 = document.createElement("h2");
