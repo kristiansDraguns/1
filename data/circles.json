@@ -186,6 +186,54 @@
         }
       ],
       "why": "Both handles are intersections on the yellow channel's green 0.5 line: the purple aqua 0.618 on 8 Jan 2023, and the purple 0.5 line on 17 Dec 2026. The 0.5 ring is the 8 Dec 2023 high and the 14 Jul 2025 high, then support at the 25 Sep and 4 Nov 2025 lows. By 6 Oct 2026 price has moved to the right of that 0.5 ring and still sits inside the 1.0 ring."
+    },
+    {
+      "id": "swing-rail-a",
+      "lineId": "purple",
+      "logOffset": 0.7545765258758287,
+      "name": "Green circle, rising rail",
+      "color": "#3dde6a",
+      "anchors": [1717571476.4940677, 1749881706.6134145],
+      "show": [0.5, 0.618, 1, 1.618],
+      "faint": [],
+      "touches": [],
+      "why": "Both handles sit on the steeper rising rail. The first is where that green rail crosses the magenta flat base on 5 Jun 2024. The second is where it crosses the flat 0.618 on 14 Jun 2025. The 0.618 ring is support at the 20 Sep 2024 low. The 0.5 ring is resistance through the Dec 2024 highs."
+    },
+    {
+      "id": "swing-rail-b",
+      "lineId": "purple",
+      "logOffset": 0.7545765258758287,
+      "name": "Yellow circle, same rail",
+      "color": "#ffe14a",
+      "anchors": [1749881706.6134145, 1769853402.2535286],
+      "show": [0.5, 0.618, 1, 1.618],
+      "faint": [],
+      "touches": [],
+      "why": "The next pair of intersections on that same green rail, not a jump to another line. Handles are 14 Jun 2025 and 31 Jan 2026, where the rail crosses the flat 0.618 and the flat far rail. The 0.618 ring is resistance at the 27 Jul 2025 high."
+    },
+    {
+      "id": "swing-618",
+      "lineId": "purple",
+      "logOffset": 0.4663282929912621,
+      "name": "Cyan circle, rising 0.618",
+      "color": "#2ee6e6",
+      "anchors": [1750082958.4281096, 1782393188.5474563],
+      "show": [0.5, 0.618, 1, 1.618],
+      "faint": [],
+      "touches": [],
+      "why": "Both handles sit on the steeper cyan 0.618. The first is the cross with the magenta flat base on 16 Jun 2025. The second is the cross with the flat 0.618 on 25 Jun 2026. The 1.0 ring is resistance at the 14 Jul 2025 high. The 0.618 ring is support at the 23 Sep 2025 low."
+    },
+    {
+      "id": "swing-flat",
+      "lineId": "blue",
+      "logOffset": 0,
+      "name": "Magenta circle, flat base",
+      "color": "#ee4ad8",
+      "anchors": [1750082958.4281096, 1802680067.944439],
+      "show": [0.5, 0.618, 1, 1.618],
+      "faint": [],
+      "touches": [],
+      "why": "Both handles sit on the magenta flat base. The first is the cross with the rising cyan 0.618 on 16 Jun 2025. The second is the cross with the rising yellow base on 15 Feb 2027. The 1.0 ring is resistance at the 13 Aug 2025 high. The 6 Oct 2026 close is just outside this circle's 0.5 ring and inside its 0.618 ring."
     }
   ]
 }

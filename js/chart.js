@@ -174,13 +174,13 @@ function setTime(t0, t1) {
 }
 
 function frameSwing() {
-  // Wide enough for the grid circle's rings and the flat-versus-rising crossings.
-  const t0 = Date.UTC(2024, 0, 1) / 1000;
-  const t1 = Date.UTC(2026, 11, 20) / 1000;
+  // Tight on the two-direction grid and the circles, the way the finished frame is.
+  const t0 = Date.UTC(2024, 3, 1) / 1000;
+  const t1 = Date.UTC(2027, 3, 1) / 1000;
   state.view = {
     t0,
     t1,
-    log0: Math.log(36000),
+    log0: Math.log(48000),
     log1: Math.log(160000),
   };
 }
@@ -264,12 +264,14 @@ function draw() {
   ctx.beginPath();
   ctx.rect(w.x, w.y, w.w, w.h);
   ctx.clip();
-  drawChannelFills();
-  drawCandles();
-  drawChannelEdges();
   if (state.viewName === "swing") {
-    drawSwingMarkers();
+    drawSwingGrid();
     drawCircles();
+    drawCandles();
+  } else {
+    drawChannelFills();
+    drawCandles();
+    drawChannelEdges();
   }
   ctx.restore();
   drawAxes();
@@ -491,29 +493,35 @@ function drawChannelEdges() {
   ctx.globalAlpha = 1;
 }
 
-function drawSwingMarkers() {
-  // The lines he traces so the strongest levels stay visible once more channels are on.
-  const marks = [
-    ["purple-up", 0],
-    ["purple-up", 0.618],
-    ["purple-up", 1],
-    ["blue-flat", 0],
-    ["blue-flat", 0.618],
-    ["blue-flat", 1],
-    ["yellow-up", 0.5],
-  ];
+function swingStroke(lineId, level) {
+  const kept = level === 0 || level === 0.618 || level === 1;
+  if (lineId === "blue") return { color: "#ee4ad8", width: kept ? 1.55 : 1, alpha: kept ? 0.95 : 0.42 };
+  if (level === 0 || level === 0.382) return { color: "#ffe14a", width: kept ? 1.55 : 1, alpha: kept ? 0.95 : 0.4 };
+  if (level === 0.618 || level === 0.786) return { color: "#2ee6e6", width: kept ? 1.55 : 1, alpha: kept ? 0.95 : 0.4 };
+  return { color: "#3dde6a", width: kept ? 1.55 : 1, alpha: kept ? 0.95 : 0.4 };
+}
+
+function drawSwingGrid() {
+  // Strokes only. The levels he keeps are the base, the 0.618, and the far rail.
+  // The in-between ratios stay as hairlines so the two directions still cross as a grid.
+  const ids = ["yellow-up", "purple-up", "blue-flat"];
+  const levels = [0, 0.382, 0.5, 0.618, 0.786, 1];
   const t0 = state.view.t0;
   const t1 = state.view.t1;
-  for (const [id, level] of marks) {
+  for (const id of ids) {
     const ch = state.channels.find((item) => item.id === id);
     if (!ch) continue;
-    ctx.beginPath();
-    ctx.strokeStyle = id === "yellow-up" ? "#f0a35e" : "#f4f1e8";
-    ctx.globalAlpha = 0.95;
-    ctx.lineWidth = level === 0 || level === 1 ? 2 : 1.4;
-    ctx.moveTo(xOf(t0), yOf(channelPrice(ch, level, t0)));
-    ctx.lineTo(xOf(t1), yOf(channelPrice(ch, level, t1)));
-    ctx.stroke();
+    const line = state.lines.find((item) => item.id === ch.lineId);
+    for (const level of levels) {
+      const stroke = swingStroke(line.id, level);
+      ctx.beginPath();
+      ctx.strokeStyle = stroke.color;
+      ctx.globalAlpha = stroke.alpha;
+      ctx.lineWidth = stroke.width;
+      ctx.moveTo(xOf(t0), yOf(channelPrice(ch, level, t0)));
+      ctx.lineTo(xOf(t1), yOf(channelPrice(ch, level, t1)));
+      ctx.stroke();
+    }
   }
   ctx.globalAlpha = 1;
 }
@@ -548,7 +556,9 @@ function barOpen(t) {
 }
 
 function shownCircles() {
-  return state.circles.filter((circle) => circle.id === "channel-grid");
+  if (state.viewName !== "swing") return [];
+  const ids = new Set(["swing-rail-a", "swing-rail-b", "swing-618", "swing-flat"]);
+  return state.circles.filter((circle) => ids.has(circle.id));
 }
 
 function drawDots() {
@@ -624,17 +634,21 @@ function drawCircles() {
   for (const circle of shownCircles()) {
     const g = circleGeom(circle);
     ctx.strokeStyle = circle.color;
-    ctx.lineWidth = 1.25;
-    ctx.setLineDash([5, 4]);
-    for (const level of circle.show) drawRing(g, level, false);
-    for (const level of circle.faint) drawRing(g, level, true);
+    ctx.lineWidth = 1.2;
     ctx.setLineDash([]);
+    for (const level of circle.show) drawRing(g, level, false);
+    for (const level of circle.faint || []) drawRing(g, level, true);
     for (const t of circle.anchors) {
       const x = xOf(t);
       const y = yOf(priceOnLine(g.line, t) * Math.exp(g.off));
       ctx.strokeStyle = circle.color;
       ctx.lineWidth = 1.4;
-      ctx.strokeRect(x - 3.5, y - 3.5, 7, 7);
+      ctx.beginPath();
+      ctx.moveTo(x - 4, y);
+      ctx.lineTo(x + 4, y);
+      ctx.moveTo(x, y - 4);
+      ctx.lineTo(x, y + 4);
+      ctx.stroke();
     }
   }
 }
@@ -762,17 +776,24 @@ function renderSide() {
       ` in the ${backBand.name} band of that channel's back channel` +
       ` (${fmtPrice(backBand.lo)} to ${fmtPrice(backBand.hi)}).`;
     if (state.viewName === "swing") {
-      const circle = state.circles.find((item) => item.id === "channel-grid");
+      const riseBase = channelPrice(purpleCh, 0, spot.t);
+      const flatBase = channelPrice(flatCh, 0, spot.t);
+      const circle = state.circles.find((item) => item.id === "swing-flat");
+      let ring = "";
       if (circle && state.circleScale) {
         const g = circleGeom(circle);
         const dt = (spot.t - g.tc) / g.sx;
-        const pastHalf = Math.abs(dt) > 0.5 * g.r1;
-        const inside = Math.abs(dt) < g.r1;
-        read +=
-          ` On the grid circle it is ${pastHalf ? "to the right of the 0.5 ring" : "inside the 0.5 ring"}` +
-          ` and ${inside ? "inside the 1.0 ring" : "outside the 1.0 ring"}.` +
-          ` The flat base just overhead is the nearest resistance. A cross of that base with a rising level is the double resistance.`;
+        const ratio = Math.abs(dt) / g.r1;
+        ring =
+          ` On the magenta circle, whose center line is that flat base, it is just outside the 0.5 ring and inside the 0.618 ring` +
+          ` (the time-radius is ${ratio.toFixed(2)} of the way to the 1.0 ring).`;
       }
+      read =
+        `The 6 Oct 2026 close is ${fmtPrice(px)}.` +
+        ` On the grid it sits above the yellow rising base at ${fmtPrice(riseBase)}` +
+        ` and under the magenta flat base at ${fmtPrice(flatBase)}.` +
+        ` Those two lines meet on 15 Feb 2027 near $92,550, the double resistance ahead of price.` +
+        ring;
     }
   }
   document.getElementById("read").textContent = read;
@@ -780,7 +801,26 @@ function renderSide() {
   const box = document.getElementById("lines");
   box.innerHTML = "";
   let worst = 0;
-  for (const row of state.channelLevels) {
+  if (state.viewName === "swing") {
+    const strokes = [
+      ["#ffe14a", "Yellow", "Rising bases. The steeper one is the purple rising support. The other is the cycle floor."],
+      ["#2ee6e6", "Cyan", "The 0.618 of each rising channel. The next channel on that slope starts here."],
+      ["#3dde6a", "Green", "The far rail of each rising channel, the level he stops on."],
+      ["#ee4ad8", "Magenta", "The flat direction, taken from the ceiling. Base, 0.618, and far rail."],
+    ];
+    for (const [color, name, whyText] of strokes) {
+      const card = document.createElement("article");
+      card.className = "card";
+      const h2 = document.createElement("h2");
+      h2.innerHTML = `<span class="swatch" style="background:${color}"></span>${name}`;
+      const why = document.createElement("p");
+      why.className = "why";
+      why.textContent = whyText;
+      card.append(h2, why);
+      box.appendChild(card);
+    }
+  }
+  for (const row of state.viewName === "swing" ? [] : state.channelLevels) {
     const card = document.createElement("article");
     card.className = "card";
     const h2 = document.createElement("h2");
@@ -824,7 +864,20 @@ function renderSide() {
     worst = Math.max(worst, circleWorst);
   }
   const channelsBox = document.getElementById("channels");
-  if (channelsBox) {
+  if (channelsBox && state.viewName === "swing") {
+    channelsBox.innerHTML = "";
+    for (const circle of shownCircles()) {
+      const card = document.createElement("article");
+      card.className = "card";
+      const h2 = document.createElement("h2");
+      h2.innerHTML = `<span class="swatch swatch-ring" style="border-color:${circle.color}"></span>${circle.name}`;
+      const why = document.createElement("p");
+      why.className = "why";
+      why.textContent = circle.why;
+      card.append(h2, why);
+      channelsBox.appendChild(card);
+    }
+  } else if (channelsBox) {
     channelsBox.innerHTML = "";
     for (const ch of state.channels) {
       const card = document.createElement("article");
