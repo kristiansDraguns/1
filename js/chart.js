@@ -186,14 +186,15 @@ function frameBlocks() {
 }
 
 function frameRings() {
-  // Zoomed to the nested rings and the close, the way the finished frame is.
-  const t0 = Date.UTC(2024, 8, 1) / 1000;
-  const t1 = Date.UTC(2027, 6, 1) / 1000;
+  // Zoomed onto the rings around the close. The outer circle runs off the pane,
+  // the way his finished frame is tight on the rings he is using.
+  const t0 = Date.UTC(2025, 2, 1) / 1000;
+  const t1 = Date.UTC(2027, 3, 1) / 1000;
   state.view = {
     t0,
     t1,
-    log0: Math.log(22000),
-    log1: Math.log(175000),
+    log0: Math.log(48000),
+    log1: Math.log(150000),
   };
 }
 
@@ -656,7 +657,7 @@ function drawDimChannelFills() {
       ctx.lineTo(xOf(t0), yOf(channelPrice(ch, b, t0)));
       ctx.closePath();
       ctx.fillStyle = levelColor(a);
-      ctx.globalAlpha = ch.lineId === "blue" ? 0.1 : 0.14;
+      ctx.globalAlpha = ch.lineId === "blue" ? 0.16 : 0.2;
       ctx.fill();
     }
   }
