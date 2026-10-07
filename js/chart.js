@@ -173,6 +173,18 @@ function setTime(t0, t1) {
   fitPrice();
 }
 
+function frameBlocks() {
+  // The working window: both channel directions cross on the pane, and price is inside a quadrant.
+  const t0 = Date.UTC(2025, 4, 1) / 1000;
+  const t1 = Date.UTC(2027, 2, 1) / 1000;
+  state.view = {
+    t0,
+    t1,
+    log0: Math.log(52000),
+    log1: Math.log(155000),
+  };
+}
+
 function frameSwing() {
   // Tight on the two-direction grid and the circles, the way the finished frame is.
   const t0 = Date.UTC(2024, 3, 1) / 1000;
@@ -198,6 +210,10 @@ function applyView(name) {
   }
   if (name === "swing") {
     frameSwing();
+    return;
+  }
+  if (name === "blocks") {
+    frameBlocks();
     return;
   }
   if (name === "channels") {
@@ -268,6 +284,11 @@ function draw() {
     drawSwingGrid();
     drawCircles();
     drawCandles();
+  } else if (state.viewName === "blocks") {
+    drawBlockFills();
+    drawCandles();
+    drawBlockEdges();
+    drawCircles();
   } else {
     drawChannelFills();
     drawCandles();
@@ -554,7 +575,55 @@ function barOpen(t) {
   return Math.floor(t / sec) * sec;
 }
 
+function blockChannels() {
+  const ids = ["purple-below", "purple-up", "purple-from-618", "blue-below", "blue-flat", "blue-from-618"];
+  return ids.map((id) => state.channels.find((ch) => ch.id === id)).filter(Boolean);
+}
+
+function drawBlockFills() {
+  const t0 = state.view.t0;
+  const t1 = state.view.t1;
+  for (const ch of blockChannels()) {
+    const levels = channelLevelsOf(ch).slice().sort((a, b) => a - b);
+    for (let i = 0; i < levels.length - 1; i++) {
+      const a = levels[i];
+      const b = levels[i + 1];
+      ctx.beginPath();
+      ctx.moveTo(xOf(t0), yOf(channelPrice(ch, a, t0)));
+      ctx.lineTo(xOf(t1), yOf(channelPrice(ch, a, t1)));
+      ctx.lineTo(xOf(t1), yOf(channelPrice(ch, b, t1)));
+      ctx.lineTo(xOf(t0), yOf(channelPrice(ch, b, t0)));
+      ctx.closePath();
+      ctx.fillStyle = levelColor(a);
+      ctx.globalAlpha = ch.lineId === "blue" ? 0.34 : 0.42;
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawBlockEdges() {
+  const t0 = state.view.t0;
+  const t1 = state.view.t1;
+  for (const ch of blockChannels()) {
+    for (const level of channelLevelsOf(ch)) {
+      ctx.beginPath();
+      ctx.strokeStyle = levelColor(level);
+      ctx.globalAlpha = 0.95;
+      ctx.lineWidth = level === 0 || level === 1 ? 1.6 : 1.15;
+      ctx.moveTo(xOf(t0), yOf(channelPrice(ch, level, t0)));
+      ctx.lineTo(xOf(t1), yOf(channelPrice(ch, level, t1)));
+      ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
 function shownCircles() {
+  if (state.viewName === "blocks") {
+    const ids = new Set(["swing-618", "swing-flat"]);
+    return state.circles.filter((circle) => ids.has(circle.id));
+  }
   if (state.viewName !== "swing") return [];
   const ids = new Set(["swing-rail-a", "swing-rail-b", "swing-618", "swing-flat"]);
   return state.circles.filter((circle) => ids.has(circle.id));
@@ -628,11 +697,16 @@ function drawRing(g, level, faint) {
   ctx.globalAlpha = 1;
 }
 
+function circleColor(circle) {
+  if (state.viewName !== "blocks") return circle.color;
+  return circle.id === "swing-flat" ? "#f4f7fb" : "#6cb6ff";
+}
+
 function drawCircles() {
   if (!state.circleScale) return;
   for (const circle of shownCircles()) {
     const g = circleGeom(circle);
-    ctx.strokeStyle = circle.color;
+    ctx.strokeStyle = circleColor(circle);
     ctx.lineWidth = 1.2;
     ctx.setLineDash([]);
     for (const level of circle.show) drawRing(g, level, false);
@@ -640,7 +714,7 @@ function drawCircles() {
     for (const t of circle.anchors) {
       const x = xOf(t);
       const y = yOf(priceOnLine(g.line, t) * Math.exp(g.off));
-      ctx.strokeStyle = circle.color;
+      ctx.strokeStyle = circleColor(circle);
       ctx.lineWidth = 1.4;
       ctx.beginPath();
       ctx.moveTo(x - 4, y);
@@ -760,6 +834,20 @@ function renderSide() {
   const purpleCh = state.channels.find((ch) => ch.id === "purple-up");
   const flatCh = state.channels.find((ch) => ch.id === "blue-flat");
   const flatBack = state.channels.find((ch) => ch.id === "blue-below");
+  const title = document.getElementById("legend-title");
+  const foot = document.getElementById("legend-foot");
+  if (title && foot) {
+    if (state.viewName === "blocks") {
+      title.textContent = "Fib channel blocks";
+      foot.textContent = "Filled fib-channel blocks in two directions. The rising stack follows the rising support. The flat stack follows the ceiling. A new channel is lined up so its levels land on the channel already there. The cells where they cross are the quadrants. The white circle and the blue circle each run from one crossing to the next.";
+    } else if (state.viewName === "swing") {
+      title.textContent = "Swing chart";
+      foot.textContent = "Thin strokes, no band fills. Yellow, cyan, and green are the rising base, the 0.618, and the far rail. Magenta is the flat direction. A cross of the two directions is double support or double resistance. Each circle runs from one intersection to the next on the same line, with the rings turned on.";
+    } else {
+      title.textContent = "Fib channels";
+      foot.textContent = "The filled lattice from the fib-channel lesson. Two angles, each stacked from the cyan 0.618, with a back channel under the base.";
+    }
+  }
   let read = `The 6 Oct 2026 close is ${fmtPrice(px)}.`;
   if (yellowCh && purpleCh && flatCh && flatBack) {
     const yBand = bandAt(yellowCh, px, spot.t);
@@ -774,6 +862,18 @@ function renderSide() {
       ` It is just under the flat channel base at ${fmtPrice(flatBase)},` +
       ` in the ${backBand.name} band of that channel's back channel` +
       ` (${fmtPrice(backBand.lo)} to ${fmtPrice(backBand.hi)}).`;
+    if (state.viewName === "blocks") {
+      const riseBase = channelPrice(purpleCh, 0, spot.t);
+      const riseRed = channelPrice(purpleCh, 0.382, spot.t);
+      const greenLo = channelPrice(flatBack, 0.5, spot.t);
+      const greenHi = channelPrice(flatBack, 0.618, spot.t);
+      read =
+        `The 6 Oct 2026 close is ${fmtPrice(px)}.` +
+        ` It sits in the quadrant where the rising gray block, ${fmtPrice(riseBase)} to ${fmtPrice(riseRed)},` +
+        ` crosses the flat green block, ${fmtPrice(greenLo)} to ${fmtPrice(greenHi)}.` +
+        ` The flat base at ${fmtPrice(flatBase)} is the top of that green block.` +
+        ` On the white circle it is just outside the 0.5 ring and inside the 0.618 ring.`;
+    }
     if (state.viewName === "swing") {
       const riseBase = channelPrice(purpleCh, 0, spot.t);
       const flatBase = channelPrice(flatCh, 0, spot.t);
@@ -863,7 +963,7 @@ function renderSide() {
     worst = Math.max(worst, circleWorst);
   }
   const channelsBox = document.getElementById("channels");
-  if (channelsBox && state.viewName === "swing") {
+  if (channelsBox && (state.viewName === "swing" || state.viewName === "blocks")) {
     channelsBox.innerHTML = "";
     for (const circle of shownCircles()) {
       const card = document.createElement("article");
@@ -1033,7 +1133,7 @@ async function main() {
       b.classList.toggle("active", b.dataset.tf === tf);
     }
   }
-  applyView(params.get("view") || "swing");
+  applyView(params.get("view") || "blocks");
   document.getElementById("loading").classList.add("hidden");
   renderSide();
   resize();

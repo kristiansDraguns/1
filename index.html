@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-      <title>BTC swing chart · 6 Oct 2026</title>
+      <title>BTC fib-channel blocks · 6 Oct 2026</title>
   <link rel="stylesheet" href="css/chart.css">
 </head>
 <body>
@@ -20,7 +20,8 @@
         <button type="button" data-tf="1h">1H</button>
       </div>
       <div class="group" id="views">
-        <button type="button" data-view="swing" class="active">Swing</button>
+        <button type="button" data-view="blocks" class="active">Blocks</button>
+        <button type="button" data-view="swing">Swing</button>
         <button type="button" data-view="channels">Channels</button>
         <button type="button" data-view="macro">Macro</button>
         <button type="button" data-view="y2022">2022–</button>
@@ -36,11 +37,11 @@
       <div id="loading">Loading Bitfinex BTC candles…</div>
     </div>
     <aside id="legend">
-      <h1>Swing chart</h1>
+      <h1 id="legend-title">Fib channel blocks</h1>
       <p class="asof" id="asof"></p>
       <div id="read"></div>
       <h1>How it is built</h1>
-      <p class="foot">Thin strokes, no band fills. Yellow, cyan, and green are the rising base, the 0.618, and the far rail. Magenta is the flat direction. A cross of the two directions is double support or double resistance. Each circle runs from one intersection to the next on the same line, with the rings turned on.</p>
+      <p class="foot" id="legend-foot">Filled fib-channel blocks in two directions. The rising stack follows the rising support. The flat stack follows the ceiling. A new channel is lined up so its levels land on the channel already there. The cells where they cross are the quadrants. The white circle and the blue circle each run from one crossing to the next.</p>
       <div id="lines"></div>
       <div id="channels"></div>
       <p class="foot" id="audit"></p>
