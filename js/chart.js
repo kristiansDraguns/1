@@ -503,9 +503,8 @@ function swingStroke(lineId, level) {
 
 function drawSwingGrid() {
   // Strokes only. The levels he keeps are the base, the 0.618, and the far rail.
-  // The in-between ratios stay as hairlines so the two directions still cross as a grid.
   const ids = ["yellow-up", "purple-up", "blue-flat"];
-  const levels = [0, 0.382, 0.5, 0.618, 0.786, 1];
+  const levels = [0, 0.618, 1];
   const t0 = state.view.t0;
   const t1 = state.view.t1;
   for (const id of ids) {
