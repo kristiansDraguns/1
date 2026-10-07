@@ -185,6 +185,18 @@ function frameBlocks() {
   };
 }
 
+function frameRings() {
+  // Zoomed to the nested rings and the close, the way the finished frame is.
+  const t0 = Date.UTC(2024, 8, 1) / 1000;
+  const t1 = Date.UTC(2027, 6, 1) / 1000;
+  state.view = {
+    t0,
+    t1,
+    log0: Math.log(22000),
+    log1: Math.log(175000),
+  };
+}
+
 function frameSwing() {
   // Tight on the two-direction grid and the circles, the way the finished frame is.
   const t0 = Date.UTC(2024, 3, 1) / 1000;
@@ -206,6 +218,10 @@ function applyView(name) {
   }
   if (name === "fit") {
     fitAll();
+    return;
+  }
+  if (name === "rings") {
+    frameRings();
     return;
   }
   if (name === "swing") {
@@ -280,7 +296,13 @@ function draw() {
   ctx.beginPath();
   ctx.rect(w.x, w.y, w.w, w.h);
   ctx.clip();
-  if (state.viewName === "swing") {
+  if (state.viewName === "rings") {
+    drawDimChannelFills();
+    drawCandles();
+    drawDimChannelEdges();
+    drawRingAxis();
+    drawCircles();
+  } else if (state.viewName === "swing") {
     drawSwingGrid();
     drawCircles();
     drawCandles();
@@ -619,7 +641,65 @@ function drawBlockEdges() {
   ctx.globalAlpha = 1;
 }
 
+function drawDimChannelFills() {
+  const t0 = state.view.t0;
+  const t1 = state.view.t1;
+  for (const ch of blockChannels()) {
+    const levels = channelLevelsOf(ch).slice().sort((a, b) => a - b);
+    for (let i = 0; i < levels.length - 1; i++) {
+      const a = levels[i];
+      const b = levels[i + 1];
+      ctx.beginPath();
+      ctx.moveTo(xOf(t0), yOf(channelPrice(ch, a, t0)));
+      ctx.lineTo(xOf(t1), yOf(channelPrice(ch, a, t1)));
+      ctx.lineTo(xOf(t1), yOf(channelPrice(ch, b, t1)));
+      ctx.lineTo(xOf(t0), yOf(channelPrice(ch, b, t0)));
+      ctx.closePath();
+      ctx.fillStyle = levelColor(a);
+      ctx.globalAlpha = ch.lineId === "blue" ? 0.1 : 0.14;
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawDimChannelEdges() {
+  const t0 = state.view.t0;
+  const t1 = state.view.t1;
+  for (const ch of blockChannels()) {
+    for (const level of channelLevelsOf(ch)) {
+      ctx.beginPath();
+      ctx.strokeStyle = levelColor(level);
+      ctx.globalAlpha = 0.28;
+      ctx.lineWidth = 1;
+      ctx.moveTo(xOf(t0), yOf(channelPrice(ch, level, t0)));
+      ctx.lineTo(xOf(t1), yOf(channelPrice(ch, level, t1)));
+      ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawRingAxis() {
+  const line = state.lines.find((item) => item.id === "purple");
+  if (!line) return;
+  const t0 = state.view.t0;
+  const t1 = state.view.t1;
+  ctx.beginPath();
+  ctx.strokeStyle = "#ffe14a";
+  ctx.globalAlpha = 0.55;
+  ctx.lineWidth = 1.4;
+  ctx.moveTo(xOf(t0), yOf(priceOnLine(line, t0)));
+  ctx.lineTo(xOf(t1), yOf(priceOnLine(line, t1)));
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
 function shownCircles() {
+  if (state.viewName === "rings") {
+    const ids = ["ring-yellow", "ring-green", "ring-orange", "ring-blue", "ring-white", "ring-red"];
+    return ids.map((id) => state.circles.find((circle) => circle.id === id)).filter(Boolean);
+  }
   if (state.viewName === "blocks") {
     const ids = new Set(["swing-618", "swing-flat"]);
     return state.circles.filter((circle) => ids.has(circle.id));
@@ -692,7 +772,7 @@ function drawRing(g, level, faint) {
     } else ctx.lineTo(x, y);
   }
   ctx.closePath();
-  ctx.globalAlpha = faint ? 0.28 : 0.9;
+  ctx.globalAlpha = faint ? 0.28 : 0.95;
   ctx.stroke();
   ctx.globalAlpha = 1;
 }
@@ -707,7 +787,7 @@ function drawCircles() {
   for (const circle of shownCircles()) {
     const g = circleGeom(circle);
     ctx.strokeStyle = circleColor(circle);
-    ctx.lineWidth = 1.2;
+    ctx.lineWidth = circle.width || 1.2;
     ctx.setLineDash([]);
     for (const level of circle.show) drawRing(g, level, false);
     for (const level of circle.faint || []) drawRing(g, level, true);
@@ -837,7 +917,10 @@ function renderSide() {
   const title = document.getElementById("legend-title");
   const foot = document.getElementById("legend-foot");
   if (title && foot) {
-    if (state.viewName === "blocks") {
+    if (state.viewName === "rings") {
+      title.textContent = "Rings from rings";
+      foot.textContent = "Fib circles nested on one trend line, the rising support. The yellow circle runs from point to point on that line. Each later circle stops where a ring of an earlier circle crosses the same line. Orange is lined up on the yellow 0.618 ring, and green on the yellow 0.5 ring. The channel blocks stay behind them, dimmed. The red circle is the thick one near price.";
+    } else if (state.viewName === "blocks") {
       title.textContent = "Fib channel blocks";
       foot.textContent = "Filled fib-channel blocks in two directions. The rising stack follows the rising support. The flat stack follows the ceiling. A new channel is lined up so its levels land on the channel already there. The cells where they cross are the quadrants. The white circle and the blue circle each run from one crossing to the next.";
     } else if (state.viewName === "swing") {
@@ -862,6 +945,34 @@ function renderSide() {
       ` It is just under the flat channel base at ${fmtPrice(flatBase)},` +
       ` in the ${backBand.name} band of that channel's back channel` +
       ` (${fmtPrice(backBand.lo)} to ${fmtPrice(backBand.hi)}).`;
+    if (state.viewName === "rings") {
+      const support = priceOnLine(state.lines.find((item) => item.id === "purple"), spot.t);
+      const yellow = state.circles.find((item) => item.id === "ring-yellow");
+      const red = state.circles.find((item) => item.id === "ring-red");
+      let onYellow = "";
+      let onRed = "";
+      if (yellow && state.circleScale) {
+        const g = circleGeom(yellow);
+        const radial = Math.hypot((spot.t - g.tc) / g.sx, (Math.log(px) - g.lc) / g.sy) / g.r1;
+        const upper = ringPricesAt(g, 0.786, spot.t);
+        onYellow =
+          ` On the yellow circle it is outside the 0.618 ring and inside the 0.786 ring` +
+          ` (radial ${radial.toFixed(2)}). The 0.786 upper arc is ${fmtPrice(Math.max(upper[0], upper[1]))}.`;
+      }
+      if (red && state.circleScale) {
+        const g = circleGeom(red);
+        const upper = ringPricesAt(g, 0.786, spot.t);
+        onRed =
+          ` On the red circle, taken from the 18 Apr 2027 handle back to the yellow 0.618 crossing on that same line,` +
+          ` the close is inside the 0.786 ring, under the upper arc at ${fmtPrice(Math.max(upper[0], upper[1]))}.`;
+      }
+      const gap = ((px / support - 1) * 100).toFixed(1);
+      read =
+        `The 6 Oct 2026 close is ${fmtPrice(px)}.` +
+        ` It sits ${gap}% above the rising support at ${fmtPrice(support)}, the trend line these rings share.` +
+        onYellow +
+        onRed;
+    }
     if (state.viewName === "blocks") {
       const riseBase = channelPrice(purpleCh, 0, spot.t);
       const riseRed = channelPrice(purpleCh, 0.382, spot.t);
@@ -900,6 +1011,27 @@ function renderSide() {
   const box = document.getElementById("lines");
   box.innerHTML = "";
   let worst = 0;
+  if (state.viewName === "rings") {
+    const strokes = [
+      ["#ffe14a", "Yellow", "The first circle, point to point on the rising support, and the trend line itself."],
+      ["#ff8a2a", "Orange", "Both handles sit on the yellow 0.618 ring, so the orange 1.0 ring matches that yellow ring."],
+      ["#3dde6a", "Green", "Both handles sit on the yellow 0.5 ring. The green 1.0 ring is that same curve."],
+      ["#4aa3ff", "Blue", "Starts at the 2024 handle and ends where the yellow 0.618 ring crosses the trend line."],
+      ["#f4f7fb", "White", "A smaller ring, from the yellow 0.5 crossing to the yellow 0.618 crossing, on the near side of price."],
+      ["#ff3b3b", "Red", "The thick ring. From the 2027 handle back to the yellow 0.618 crossing. The one left bright near price."],
+    ];
+    for (const [color, name, whyText] of strokes) {
+      const card = document.createElement("article");
+      card.className = "card";
+      const h2 = document.createElement("h2");
+      h2.innerHTML = `<span class="swatch" style="background:${color}"></span>${name}`;
+      const why = document.createElement("p");
+      why.className = "why";
+      why.textContent = whyText;
+      card.append(h2, why);
+      box.appendChild(card);
+    }
+  }
   if (state.viewName === "swing") {
     const strokes = [
       ["#ffe14a", "Yellow", "Rising bases. The steeper one is the purple rising support. The other is the cycle floor."],
@@ -919,7 +1051,7 @@ function renderSide() {
       box.appendChild(card);
     }
   }
-  for (const row of state.viewName === "swing" ? [] : state.channelLevels) {
+  for (const row of state.viewName === "swing" || state.viewName === "rings" ? [] : state.channelLevels) {
     const card = document.createElement("article");
     card.className = "card";
     const h2 = document.createElement("h2");
@@ -963,7 +1095,7 @@ function renderSide() {
     worst = Math.max(worst, circleWorst);
   }
   const channelsBox = document.getElementById("channels");
-  if (channelsBox && (state.viewName === "swing" || state.viewName === "blocks")) {
+  if (channelsBox && (state.viewName === "swing" || state.viewName === "blocks" || state.viewName === "rings")) {
     channelsBox.innerHTML = "";
     for (const circle of shownCircles()) {
       const card = document.createElement("article");
@@ -1133,7 +1265,7 @@ async function main() {
       b.classList.toggle("active", b.dataset.tf === tf);
     }
   }
-  applyView(params.get("view") || "blocks");
+  applyView(params.get("view") || "rings");
   document.getElementById("loading").classList.add("hidden");
   renderSide();
   resize();

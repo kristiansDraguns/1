@@ -234,6 +234,132 @@
       "faint": [],
       "touches": [],
       "why": "Both handles sit on the magenta flat base. The first is the cross with the rising cyan 0.618 on 16 Jun 2025. The second is the cross with the rising yellow base on 15 Feb 2027. The 1.0 ring is resistance at the 13 Aug 2025 high. The 6 Oct 2026 close is just outside this circle's 0.5 ring and inside its 0.618 ring."
+    },
+    {
+      "id": "ring-yellow",
+      "lineId": "purple",
+      "logOffset": 0,
+      "name": "Yellow circle, the first ring",
+      "color": "#ffe14a",
+      "width": 1.7,
+      "anchors": [1705795200, 1808006400],
+      "show": [0.5, 0.618, 0.786, 1],
+      "faint": [],
+      "touches": [
+        {
+          "t": 1732665600,
+          "p": 97251,
+          "level": 0.618,
+          "role": "resistance",
+          "label": "27 Nov 2024 high"
+        }
+      ],
+      "why": "Point to point on the rising support, the same handles as the earlier purple circle: 21 Jan 2024 and 18 Apr 2027. Later circles stop on this circle's rings. The 0.618 ring is resistance at the 27 Nov 2024 high."
+    },
+    {
+      "id": "ring-green",
+      "lineId": "purple",
+      "logOffset": 0,
+      "name": "Green circle, on the 0.5 ring",
+      "color": "#3dde6a",
+      "width": 2,
+      "anchors": [1731348000, 1782453600],
+      "show": [0.618, 1],
+      "faint": [],
+      "touches": [
+        {
+          "t": 1730592000,
+          "p": 67530,
+          "level": 1,
+          "role": "support",
+          "label": "3 Nov 2024 low"
+        }
+      ],
+      "why": "Both handles are where the yellow 0.5 ring crosses the rising support, 11 Nov 2024 and 26 Jun 2026. The green 1.0 ring is that same yellow curve. It is support at the 3 Nov 2024 low."
+    },
+    {
+      "id": "ring-orange",
+      "lineId": "purple",
+      "logOffset": 0,
+      "name": "Orange circle, matching yellow",
+      "color": "#ff8a2a",
+      "width": 2.2,
+      "anchors": [1725317539.2, 1788484060.8],
+      "show": [0.618, 1],
+      "faint": [],
+      "touches": [
+        {
+          "t": 1732665600,
+          "p": 97251,
+          "level": 1,
+          "role": "resistance",
+          "label": "27 Nov 2024 high"
+        }
+      ],
+      "why": "Both handles are where the yellow 0.618 ring crosses the rising support, 2 Sep 2024 and 4 Sep 2026. The orange 1.0 ring lies on that yellow ring."
+    },
+    {
+      "id": "ring-blue",
+      "lineId": "purple",
+      "logOffset": 0,
+      "name": "Blue circle, out to the ring",
+      "color": "#4aa3ff",
+      "width": 1.6,
+      "anchors": [1705795200, 1788484060.8],
+      "show": [0.618, 1],
+      "faint": [],
+      "touches": [
+        {
+          "t": 1720483200,
+          "p": 58422,
+          "level": 0.618,
+          "role": "resistance",
+          "label": "9 Jul 2024 high"
+        }
+      ],
+      "why": "Starts at the 21 Jan 2024 handle and ends where the yellow 0.618 ring crosses the trend line, 4 Sep 2026, instead of ending at the other channel intersection. The 0.618 ring is resistance at the 9 Jul 2024 high."
+    },
+    {
+      "id": "ring-white",
+      "lineId": "purple",
+      "logOffset": 0,
+      "name": "White circle, ring to ring",
+      "color": "#f4f7fb",
+      "width": 1.8,
+      "anchors": [1782453600, 1788484060.8],
+      "show": [0.618, 1],
+      "faint": [],
+      "touches": [
+        {
+          "t": 1787356800,
+          "p": 78886,
+          "level": 1,
+          "role": "resistance",
+          "label": "22 Aug 2026 high"
+        }
+      ],
+      "why": "From the yellow 0.5 crossing on 26 Jun 2026 to the yellow 0.618 crossing on 4 Sep 2026, still on the rising support. The 1.0 ring is resistance at the 22 Aug 2026 high."
+    },
+    {
+      "id": "ring-red",
+      "lineId": "purple",
+      "logOffset": 0,
+      "name": "Red circle, the bright ring",
+      "color": "#ff3b3b",
+      "width": 2.8,
+      "anchors": [1788484060.8, 1808006400],
+      "show": [0.618, 0.786, 1],
+      "faint": [],
+      "touches": [
+        {
+          "t": 1788393600,
+          "p": 77045,
+          "level": 1,
+          "role": "support",
+          "label": "3 Sep 2026 low"
+        }
+      ],
+      "why": "From the outer handle on 18 Apr 2027 back along the rising support to the yellow 0.618 crossing on 4 Sep 2026. Drawn thicker than the others. The 1.0 ring is support at the 3 Sep 2026 low. The 6 Oct 2026 close sits inside the 0.786 ring."
     }
   ]
 }
