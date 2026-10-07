@@ -2,7 +2,7 @@ const TF_SEC = { "1d": 86400, "4h": 14400, "1h": 3600 };
 const PAD = { l: 8, r: 72, t: 16, b: 28 };
 
 const state = {
-  tf: "1d",
+  tf: "4h",
   series: {},
   lines: [],
   circles: [],
@@ -126,6 +126,29 @@ function fitAll() {
   fitPrice();
 }
 
+function frameChannels() {
+  const t0 = Date.UTC(2022, 5, 1) / 1000;
+  const t1 = Date.UTC(2027, 0, 20) / 1000;
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (const ch of state.channels) {
+    for (const level of channelLevelsOf(ch)) {
+      for (const t of [t0, t1]) {
+        const p = channelPrice(ch, level, t);
+        if (p < lo) lo = p;
+        if (p > hi) hi = p;
+      }
+    }
+  }
+  const pad = 0.06;
+  state.view = {
+    t0,
+    t1,
+    log0: Math.log(lo) - pad,
+    log1: Math.log(hi) + pad,
+  };
+}
+
 function setTime(t0, t1) {
   const cs = candles();
   const sec = TF_SEC[state.tf];
@@ -147,8 +170,15 @@ function setTime(t0, t1) {
 function applyView(name) {
   const cs = candles();
   const last = cs[cs.length - 1].t;
+  for (const b of document.querySelectorAll("#views button")) {
+    b.classList.toggle("active", b.dataset.view === name);
+  }
   if (name === "fit") {
     fitAll();
+    return;
+  }
+  if (name === "channels") {
+    frameChannels();
     return;
   }
   if (name === "macro") {
@@ -212,12 +242,10 @@ function draw() {
   ctx.rect(w.x, w.y, w.w, w.h);
   ctx.clip();
   drawCandles();
-  drawLines();
   drawChannels();
   drawCircles();
   drawDots();
   ctx.restore();
-  drawLineLabels();
   drawChannelLabels();
   drawCircleLabels();
   drawAxes();
@@ -393,27 +421,30 @@ function channelPrice(ch, level, t) {
   return Math.exp(Math.log(priceOnLine(line, t)) + ch.origin + level * ch.width);
 }
 
+function channelLevelsOf(ch) {
+  return ch.show || state.channelLevels.map((item) => item.ratio);
+}
+
 function drawChannels() {
-  for (const ch of state.channels) {
-    const levels = ch.show || state.channelLevels.map((item) => item.ratio);
-    for (const level of levels) {
+  const order = ["purple-below", "purple-back", "yellow-up", "purple-up"];
+  const channels = state.channels.slice().sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+  for (const ch of channels) {
+    for (const level of channelLevelsOf(ch)) {
       ctx.strokeStyle = levelColor(level);
-      ctx.lineWidth = level === 0.618 || level === 1 ? 1.35 : 1;
-      ctx.setLineDash(ch.dash ? [3, 4] : []);
-      ctx.globalAlpha = ch.dash ? 0.75 : 0.88;
+      ctx.lineWidth = level === 0 || level === 0.618 || level === 1 ? 2.15 : 1.7;
+      ctx.globalAlpha = 0.95;
       ctx.beginPath();
       ctx.moveTo(xOf(state.view.t0), yOf(channelPrice(ch, level, state.view.t0)));
       ctx.lineTo(xOf(state.view.t1), yOf(channelPrice(ch, level, state.view.t1)));
       ctx.stroke();
     }
-    ctx.setLineDash([]);
     ctx.globalAlpha = 1;
     if (!ch.anchor) continue;
     const x = xOf(ch.anchor.t);
     const y = yOf(ch.anchor.p);
     ctx.strokeStyle = levelColor(ch.anchor.level);
-    ctx.lineWidth = 1.4;
-    ctx.strokeRect(x - 3.5, y - 3.5, 7, 7);
+    ctx.lineWidth = 1.6;
+    ctx.strokeRect(x - 4, y - 4, 8, 8);
   }
 }
 
@@ -426,19 +457,17 @@ function drawChannelLabels() {
   const placed = [];
   const tLabel = state.view.t1;
   for (const ch of state.channels) {
-    const levels = (ch.show || state.channelLevels.map((item) => item.ratio)).filter(
-      (level) => level === 0.618 || level === 1
-    );
+    const levels = channelLevelsOf(ch);
     for (const level of levels) {
       let y = yOf(channelPrice(ch, level, tLabel));
       if (y < w.y + 10 || y > w.y + w.h - 10) continue;
       for (const py of placed) {
-        if (Math.abs(py - y) < 12) y = py - 12;
+        if (Math.abs(py - y) < 13) y = py - 13;
       }
       placed.push(y);
+      const row = state.channelLevels.find((item) => item.ratio === level);
       ctx.fillStyle = levelColor(level);
-      const tag = ch.dash ? "back " : "";
-      ctx.fillText(`${tag}${level}`, w.x + 6, y);
+      ctx.fillText(row ? row.name : String(level), w.x + 8, y);
     }
   }
 }
@@ -448,34 +477,13 @@ function barOpen(t) {
   return Math.floor(t / sec) * sec;
 }
 
+function shownCircles() {
+  return state.circles.filter((circle) => circle.id === "channel-grid");
+}
+
 function drawDots() {
-  for (const line of state.lines) {
-    for (const touch of line.touches) {
-      const bt = barOpen(touch.t);
-      if (bt < state.view.t0 - TF_SEC[state.tf] || bt > state.view.t1) continue;
-      const x = xOf(bt);
-      const y = yOf(touch.p);
-      ctx.beginPath();
-      ctx.fillStyle = "#0c1016";
-      ctx.strokeStyle = line.color;
-      ctx.lineWidth = 1.5;
-      ctx.arc(x, y, 3.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-    }
-  }
-  for (const ch of state.channels) {
-    for (const touch of ch.touches) {
-      const bt = barOpen(touch.t);
-      if (bt < state.view.t0 - TF_SEC[state.tf] || bt > state.view.t1) continue;
-      ctx.beginPath();
-      ctx.fillStyle = levelColor(touch.level);
-      ctx.arc(xOf(bt), yOf(touch.p), 2.4, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
   if (!state.circleScale) return;
-  for (const circle of state.circles) {
+  for (const circle of shownCircles()) {
     const g = circleGeom(circle);
     for (const touch of circle.touches) {
       const bt = barOpen(touch.t);
@@ -543,7 +551,7 @@ function drawRing(g, level, faint) {
 
 function drawCircles() {
   if (!state.circleScale) return;
-  for (const circle of state.circles) {
+  for (const circle of shownCircles()) {
     const g = circleGeom(circle);
     ctx.strokeStyle = circle.color;
     ctx.lineWidth = 1.25;
@@ -568,7 +576,7 @@ function drawCircleLabels() {
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
   const tLabel = state.view.t0 + (state.view.t1 - state.view.t0) * 0.72;
-  for (const circle of state.circles) {
+  for (const circle of shownCircles()) {
     const g = circleGeom(circle);
     for (const level of circle.show) {
       const pair = ringPricesAt(g, level, tLabel);
@@ -632,86 +640,61 @@ function touchError(line, touch) {
   return (touch.p / linePx - 1) * 100;
 }
 
+function placeLine(px, linePx) {
+  const gap = (px / linePx - 1) * 100;
+  const where = gap >= 0 ? "below the close" : "above the close";
+  return `${fmtPrice(linePx)}, ${Math.abs(gap).toFixed(1)}% ${where}`;
+}
+
 function renderSide() {
   const cs = candles();
   const last = cs[cs.length - 1];
-  const px = last.c;
-  document.getElementById("asof").textContent =
-    `${state.tf.toUpperCase()} close ${fmtPrice(px)} · ${fmtDate(last.t, state.tf !== "1d")} UTC`;
-
-  const levels = state.lines.map((line) => {
-    const lp = priceOnLine(line, last.t);
-    return { line, lp, gap: (px / lp - 1) * 100 };
+  const daily = state.series["1d"].find((bar) => {
+    const d = new Date(bar.t * 1000);
+    return d.getUTCFullYear() === 2026 && d.getUTCMonth() === 9 && d.getUTCDate() === 6;
   });
-  const byId = Object.fromEntries(levels.map((row) => [row.line.id, row]));
-  const blue = byId.blue;
-  const purple = byId.purple;
-  const yellow = byId.yellow;
-  const rel = (row) => `${fmtPrice(row.lp)}, ${Math.abs(row.gap).toFixed(1)}% ${row.gap >= 0 ? "below" : "above"} the close`;
-  const yellowNow = state.circles.find((c) => c.id === "yellow-now");
-  let ringNote = "";
-  if (yellowNow && state.circleScale) {
-    const g = circleGeom(yellowNow);
-    const upper = ringPricesAt(g, 0.618, last.t);
-    if (upper) {
-      const ring = Math.max(upper[0], upper[1]);
-      const gap = (px / ring - 1) * 100;
-      ringNote =
-        ` The yellow 0.618 ring is ${fmtPrice(ring)}, ${Math.abs(gap).toFixed(1)}% ${gap >= 0 ? "below" : "above"} the close. ` +
-        `That ring capped the 21 Sep and 2 Oct highs.`;
-    }
-  }
-  let channelNote = "";
+  const spot = daily || last;
+  const px = spot.c;
+  document.getElementById("asof").textContent =
+    `${state.tf.toUpperCase()} · 6 Oct 2026 close ${fmtPrice(px)}`;
+
   const yellowCh = state.channels.find((ch) => ch.id === "yellow-up");
   const purpleCh = state.channels.find((ch) => ch.id === "purple-up");
+  let read = `The 6 Oct 2026 close is ${fmtPrice(px)}.`;
   if (yellowCh && purpleCh) {
-    const y236 = channelPrice(yellowCh, 0.236, last.t);
-    const p236 = channelPrice(purpleCh, 0.236, last.t);
-    const yGap = (px / y236 - 1) * 100;
-    const pGap = (px / p236 - 1) * 100;
-    channelNote =
-      ` Above both channel bases, the next rails are the red 0.236 lines: yellow ${fmtPrice(y236)} (${Math.abs(yGap).toFixed(1)}% ${yGap >= 0 ? "below" : "above"} the close) and purple ${fmtPrice(p236)} (${Math.abs(pGap).toFixed(1)}% ${pGap >= 0 ? "below" : "above"} the close).`;
+    const y0 = channelPrice(yellowCh, 0, spot.t);
+    const yRed = channelPrice(yellowCh, 0.382, spot.t);
+    const p0 = channelPrice(purpleCh, 0, spot.t);
+    const pRed = channelPrice(purpleCh, 0.382, spot.t);
+    read +=
+      ` On the flatter channel the gray base is ${placeLine(px, y0)} and the red 0.382 is ${placeLine(px, yRed)}.` +
+      ` On the steeper channel the gray base is ${placeLine(px, p0)} and the red 0.382 is ${placeLine(px, pRed)}.`;
   }
-  document.getElementById("read").textContent =
-    `The blue ceiling is ${rel(blue)}. Purple support is ${rel(purple)}. The yellow floor is ${rel(yellow)}.` +
-    ringNote +
-    channelNote;
+  document.getElementById("read").textContent = read;
 
   const box = document.getElementById("lines");
   box.innerHTML = "";
   let worst = 0;
-  for (const line of state.lines) {
-    const row = byId[line.id];
+  for (const row of state.channelLevels) {
     const card = document.createElement("article");
     card.className = "card";
     const h2 = document.createElement("h2");
-    h2.innerHTML = `<span class="swatch" style="background:${line.color}"></span>${line.name}`;
-    const level = document.createElement("p");
-    level.className = "level";
-    const side = row.gap >= 0 ? "under the close" : "over the close";
-    level.textContent = `${fmtPrice(row.lp)} on the line · ${Math.abs(row.gap).toFixed(1)}% ${side}`;
+    h2.innerHTML = `<span class="swatch" style="background:${row.color}"></span>${row.name} ${row.ratio}`;
     const why = document.createElement("p");
     why.className = "why";
-    why.textContent = line.why;
-    const ul = document.createElement("ul");
-    for (const touch of line.touches) {
-      const err = touchError(line, touch);
-      worst = Math.max(worst, Math.abs(err));
-      const li = document.createElement("li");
-      const anchor = line.ref.some((r) => r.t === touch.t && r.p === touch.p);
-      li.innerHTML = `${touch.label} · ${touch.role}${anchor ? " · reference" : ""} <span class="err">${err >= 0 ? "+" : ""}${err.toFixed(2)}%</span>`;
-      ul.appendChild(li);
-    }
-    card.append(h2, level, why, ul);
-    card.addEventListener("mouseenter", () => { state.active = line.id; draw(); });
-    card.addEventListener("mouseleave", () => { state.active = null; draw(); });
+    if (row.ratio === 0) why.textContent = "Base. This is the trend line, hidden once the gray level sits on it.";
+    else if (row.ratio === 0.618) why.textContent = "Aqua. The next channel starts on this line.";
+    else if (row.ratio === 1) why.textContent = "Blue. The width of the channel is pulled out to this rail.";
+    else if (row.ratio === 0.382) why.textContent = "Red. First level up from the gray base.";
+    else why.textContent = "Green. Halfway from the base to the blue rail.";
+    card.append(h2, why);
     box.appendChild(card);
   }
   const circlesBox = document.getElementById("circles");
   if (circlesBox) {
     circlesBox.innerHTML = "";
     let circleWorst = 0;
-    for (const circle of state.circles) {
+    for (const circle of shownCircles()) {
       const g = state.circleScale ? circleGeom(circle) : null;
       const card = document.createElement("article");
       card.className = "card";
@@ -771,9 +754,6 @@ function wire() {
     if (!state.series[tf]) return;
     state.tf = tf;
     for (const b of document.querySelectorAll("#tf button")) b.classList.toggle("active", b === btn);
-    const t0 = state.view.t0;
-    const t1 = state.view.t1;
-    setTime(t0, t1);
     renderSide();
     draw();
   });
@@ -895,7 +875,7 @@ async function main() {
       b.classList.toggle("active", b.dataset.tf === tf);
     }
   }
-  applyView(params.get("view") || "macro");
+  applyView(params.get("view") || "channels");
   document.getElementById("loading").classList.add("hidden");
   renderSide();
   resize();
