@@ -17,8 +17,13 @@
     },
     {
       "ratio": 0.618,
-      "color": "#3ee0d2",
-      "name": "aqua"
+      "color": "#2ad4c8",
+      "name": "cyan"
+    },
+    {
+      "ratio": 0.786,
+      "color": "#c084e0",
+      "name": "purple"
     },
     {
       "ratio": 1,
@@ -28,8 +33,41 @@
   ],
   "channels": [
     {
+      "id": "yellow-below",
+      "name": "Back channel, flatter",
+      "lineId": "yellow",
+      "origin": -0.5793969183603253,
+      "width": 0.937535466731918,
+      "dash": false,
+      "show": [0, 0.382, 0.5, 0.618],
+      "why": "The back channel under the flatter base. Same upward slope. Its cyan line lies on that gray base, so the new gray, red, and green bands are the ones below it.",
+      "touches": []
+    },
+    {
+      "id": "purple-below",
+      "name": "Back channel, steeper",
+      "lineId": "purple",
+      "origin": -0.4663282929912621,
+      "width": 0.7545765258758287,
+      "dash": false,
+      "show": [0, 0.382, 0.5, 0.618],
+      "why": "The back channel under the steeper base. Its cyan line lies on that gray base and its blue line would lie on the red 0.382. The new gray, red, and green bands sit below the base.",
+      "touches": []
+    },
+    {
+      "id": "blue-below",
+      "name": "Back channel, flat",
+      "lineId": "blue",
+      "origin": -0.2864639254584123,
+      "width": 0.4635338599003435,
+      "dash": false,
+      "show": [0, 0.382, 0.5, 0.618],
+      "why": "The back channel under the flat ceiling. Same shallow slope, so it cuts across the two rising channels. Its cyan line lies on the flat gray base. The 6 Oct 2026 close sits in this channel's green band.",
+      "touches": []
+    },
+    {
       "id": "yellow-up",
-      "name": "Flatter channel",
+      "name": "Flatter rising channel",
       "lineId": "yellow",
       "origin": 0,
       "width": 0.937535466731918,
@@ -40,7 +78,7 @@
         "level": 1,
         "label": "21 May 2024 high"
       },
-      "why": "Gray base is the yellow cycle floor, the shallower line. It crosses the steeper gray base near the November 2022 low. Blue 1.0 is the 21 May 2024 high, and that same rail meets the 30 May 2022 and 6 Sep 2019 highs. The original trend line is hidden. The gray level is that line.",
+      "why": "Gray base is the yellow cycle floor. It rises, and it crosses the steeper gray base near the November 2022 low. Blue 1.0 is the 21 May 2024 high. Bands run gray, red, green, cyan, purple, up to that blue rail.",
       "touches": [
         {
           "t": 1716249600,
@@ -62,47 +100,13 @@
           "level": 1,
           "role": "resistance",
           "label": "6 Sep 2019 high"
-        },
-        {
-          "t": 1577059200,
-          "p": 7715.1,
-          "level": 0.5,
-          "role": "resistance",
-          "label": "23 Dec 2019 high"
-        },
-        {
-          "t": 1766016000,
-          "p": 84562.0,
-          "level": 0.5,
-          "role": "support",
-          "label": "18 Dec 2025 low"
-        },
-        {
-          "t": 1588809600,
-          "p": 10045.0,
-          "level": 0.618,
-          "role": "resistance",
-          "label": "7 May 2020 high"
-        },
-        {
-          "t": 1500508800,
-          "p": 2922.0,
-          "level": 0.5,
-          "role": "resistance",
-          "label": "20 Jul 2017 high"
         }
       ],
-      "show": [
-        0,
-        0.382,
-        0.5,
-        0.618,
-        1
-      ]
+      "show": [0, 0.382, 0.5, 0.618, 0.786, 1]
     },
     {
       "id": "purple-up",
-      "name": "Steeper channel",
+      "name": "Steeper rising channel",
       "lineId": "purple",
       "origin": 0,
       "width": 0.7545765258758287,
@@ -113,7 +117,7 @@
         "level": 1,
         "label": "19 Apr 2024 low"
       },
-      "why": "Gray base is the purple rising support. Blue 1.0 is the 19 Apr 2024 low. Aqua 0.618 meets the 25 May 2020 low, the 13 Sep 2022 high, and the 22 Dec 2025 high. The next channel starts on this aqua line.",
+      "why": "Gray base is the purple rising support, the steeper of the two rising lines. Blue 1.0 is the 19 Apr 2024 low. Cyan 0.618 meets the 25 May 2020 low, the 13 Sep 2022 high, and the 22 Dec 2025 high. The next channel on this slope starts on that cyan line.",
       "touches": [
         {
           "t": 1713484800,
@@ -121,13 +125,6 @@
           "level": 1,
           "role": "support",
           "label": "19 Apr 2024 low"
-        },
-        {
-          "t": 1570752000,
-          "p": 8815.3,
-          "level": 1,
-          "role": "resistance",
-          "label": "11 Oct 2019 high"
         },
         {
           "t": 1663027200,
@@ -149,100 +146,80 @@
           "level": 0.618,
           "role": "resistance",
           "label": "22 Dec 2025 high"
-        },
-        {
-          "t": 1586217600,
-          "p": 7454.3,
-          "level": 0.5,
-          "role": "resistance",
-          "label": "7 Apr 2020 high"
-        },
-        {
-          "t": 1682294400,
-          "p": 26978.0,
-          "level": 0.5,
-          "role": "support",
-          "label": "24 Apr 2023 low"
         }
       ],
-      "show": [
-        0,
-        0.382,
-        0.5,
-        0.618,
-        1
-      ]
+      "show": [0, 0.382, 0.5, 0.618, 0.786, 1]
     },
     {
-      "id": "purple-back",
-      "name": "From the purple 0.618",
+      "id": "blue-flat",
+      "name": "Flat channel",
+      "lineId": "blue",
+      "origin": 0,
+      "width": 0.4635338599003435,
+      "dash": false,
+      "anchor": {
+        "t": 1734393600,
+        "p": 108100,
+        "level": 1,
+        "label": "17 Dec 2024 high"
+      },
+      "why": "Gray base is the blue ceiling, the sideways angle. It cuts across both rising channels. Blue 1.0 is the 17 Dec 2024 high. The crossings of this channel with the rising ones are the lattice on the pane.",
+      "touches": [
+        {
+          "t": 1734393600,
+          "p": 108100.0,
+          "level": 1,
+          "role": "resistance",
+          "label": "17 Dec 2024 high"
+        }
+      ],
+      "show": [0, 0.382, 0.5, 0.618, 0.786, 1]
+    },
+    {
+      "id": "yellow-from-618",
+      "name": "From the flatter 0.618",
+      "lineId": "yellow",
+      "origin": 0.5793969183603253,
+      "width": 0.5793969183603253,
+      "dash": false,
+      "show": [0.618, 0.786, 1],
+      "why": "Built off the flatter cyan 0.618. Its own cyan line lies on the flatter blue rail, and the cyan and purple bands above that rail are the new ones.",
+      "touches": []
+    },
+    {
+      "id": "purple-from-618",
+      "name": "From the steeper 0.618",
       "lineId": "purple",
       "origin": 0.4663282929912621,
       "width": 0.4663282929912621,
       "dash": false,
-      "show": [
-        0.382,
-        0.5,
-        1
-      ],
+      "show": [0.618, 0.786, 1],
       "anchor": {
         "t": 1755129600,
         "p": 123640,
         "level": 1,
         "label": "14 Aug 2025 high"
       },
-      "why": "Built from the purple aqua 0.618. Its gray base lies on that aqua line, and its own aqua line lies on the purple blue 1.0, so those two levels are lines already on the chart. The new red, green, and blue lines are the ones this channel adds, farther up the same slope.",
+      "why": "Built off the steeper cyan 0.618, which is the start he uses. Its cyan line lies on the steeper blue rail. The new cyan and purple bands continue up the same slope. The blue rail of this channel is the 14 Aug 2025 high.",
       "touches": [
-        {
-          "t": 1590969600,
-          "p": 10398.0,
-          "level": 0.382,
-          "role": "resistance",
-          "label": "1 Jun 2020 high"
-        },
-        {
-          "t": 1730678400,
-          "p": 66880.0,
-          "level": 0.382,
-          "role": "support",
-          "label": "4 Nov 2024 low"
-        },
-        {
-          "t": 1724544000,
-          "p": 65200.0,
-          "level": 0.5,
-          "role": "resistance",
-          "label": "25 Aug 2024 high"
-        },
         {
           "t": 1755129600,
           "p": 123640.0,
           "level": 1,
           "role": "resistance",
           "label": "14 Aug 2025 high"
-        },
-        {
-          "t": 1559174400,
-          "p": 9109.0,
-          "level": 1,
-          "role": "resistance",
-          "label": "30 May 2019 high"
         }
       ]
     },
     {
-      "id": "purple-below",
-      "name": "Back channel",
-      "lineId": "purple",
-      "origin": -0.4663282929912621,
-      "width": 0.7545765258758287,
+      "id": "blue-from-618",
+      "name": "From the flat 0.618",
+      "lineId": "blue",
+      "origin": 0.2864639254584123,
+      "width": 0.2864639254584123,
       "dash": false,
-      "show": [
-        0,
-        0.382,
-        0.5
-      ],
-      "why": "The lines under the purple base. Its aqua level lies on the gray base and its blue level lies on the red 0.382, so two levels land on lines already there. The stack still points up. The new gray, red, and green lines are the ones below the base.",
+      "show": [0.618, 0.786, 1],
+      "why": "Built off the flat cyan 0.618. Its cyan line lies on the flat blue rail, and the cyan and purple bands above it keep the shallow angle, crossing the rising channels higher up.",
       "touches": []
     }
   ]

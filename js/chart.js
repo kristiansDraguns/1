@@ -126,31 +126,20 @@ function fitAll() {
   fitPrice();
 }
 
-function finishedChannels() {
-  const want = ["yellow-up", "purple-up"];
-  return want.map((id) => state.channels.find((ch) => ch.id === id)).filter(Boolean);
+function drawnChannels() {
+  return state.channels;
 }
 
 function frameChannels() {
-  const t0 = Date.UTC(2022, 10, 1) / 1000;
+  // The 8:00 window is the working lattice: a few years, tight enough
+  // that the flat ceiling cuts across the rising channels on the pane.
+  const t0 = Date.UTC(2024, 5, 1) / 1000;
   const t1 = Date.UTC(2026, 9, 20) / 1000;
-  let lo = Infinity;
-  let hi = -Infinity;
-  for (const ch of finishedChannels()) {
-    for (const level of [0, 1]) {
-      for (const t of [t0, t1]) {
-        const p = channelPrice(ch, level, t);
-        if (p < lo) lo = p;
-        if (p > hi) hi = p;
-      }
-    }
-  }
-  const pad = 0.04;
   state.view = {
     t0,
     t1,
-    log0: Math.log(lo) - pad,
-    log1: Math.log(hi) + pad,
+    log0: Math.log(46000),
+    log1: Math.log(150000),
   };
 }
 
@@ -427,17 +416,10 @@ function channelLevelsOf(ch) {
   return ch.show || state.channelLevels.map((item) => item.ratio);
 }
 
-function bandFill(ratio) {
-  if (ratio >= 0.618) return "#6cb6ff";
-  if (ratio >= 0.5) return "#3cba7a";
-  if (ratio >= 0.382) return "#e15a6a";
-  return "#9aa3ad";
-}
-
 function drawChannelFills() {
   const t0 = state.view.t0;
   const t1 = state.view.t1;
-  for (const ch of finishedChannels()) {
+  for (const ch of drawnChannels()) {
     const levels = channelLevelsOf(ch).slice().sort((a, b) => a - b);
     for (let i = 0; i < levels.length - 1; i++) {
       const a = levels[i];
@@ -448,8 +430,10 @@ function drawChannelFills() {
       ctx.lineTo(xOf(t1), yOf(channelPrice(ch, b, t1)));
       ctx.lineTo(xOf(t0), yOf(channelPrice(ch, b, t0)));
       ctx.closePath();
-      ctx.fillStyle = bandFill(a);
-      ctx.globalAlpha = 0.34;
+      ctx.fillStyle = levelColor(a);
+      // The flat family is the other angle. Keep it strong enough to read
+      // across the two rising stacks.
+      ctx.globalAlpha = ch.lineId === "blue" ? 0.26 : 0.12;
       ctx.fill();
     }
   }
@@ -459,13 +443,13 @@ function drawChannelFills() {
 function drawChannelEdges() {
   const t0 = state.view.t0;
   const t1 = state.view.t1;
-  for (const ch of finishedChannels()) {
+  for (const ch of drawnChannels()) {
     const levels = channelLevelsOf(ch).slice().sort((a, b) => a - b);
     for (const level of levels) {
       ctx.beginPath();
-      ctx.strokeStyle = level === 0.618 || level === 1 ? "#6cb6ff" : bandFill(level);
-      ctx.globalAlpha = 0.9;
-      ctx.lineWidth = level === 0 || level === 1 ? 1.6 : 1.15;
+      ctx.strokeStyle = levelColor(level);
+      ctx.globalAlpha = 0.92;
+      ctx.lineWidth = level === 0 || level === 1 ? 1.7 : 1.15;
       ctx.moveTo(xOf(t0), yOf(channelPrice(ch, level, t0)));
       ctx.lineTo(xOf(t1), yOf(channelPrice(ch, level, t1)));
       ctx.stroke();
@@ -672,6 +656,21 @@ function placeLine(px, linePx) {
   return `${fmtPrice(linePx)}, ${Math.abs(gap).toFixed(1)}% ${where}`;
 }
 
+function bandAt(ch, px, t) {
+  const levels = channelLevelsOf(ch).slice().sort((a, b) => a - b);
+  const rows = levels.map((level) => ({
+    level,
+    price: channelPrice(ch, level, t),
+    name: (state.channelLevels.find((item) => item.ratio === level) || {}).name || String(level),
+  }));
+  for (let i = 0; i < rows.length - 1; i++) {
+    if (px >= rows[i].price && px < rows[i + 1].price) {
+      return { name: rows[i].name, lo: rows[i].price, hi: rows[i + 1].price };
+    }
+  }
+  return null;
+}
+
 function renderSide() {
   const cs = candles();
   const last = cs[cs.length - 1];
@@ -686,17 +685,22 @@ function renderSide() {
 
   const yellowCh = state.channels.find((ch) => ch.id === "yellow-up");
   const purpleCh = state.channels.find((ch) => ch.id === "purple-up");
+  const flatCh = state.channels.find((ch) => ch.id === "blue-flat");
+  const flatBack = state.channels.find((ch) => ch.id === "blue-below");
   let read = `The 6 Oct 2026 close is ${fmtPrice(px)}.`;
-  if (yellowCh && purpleCh) {
-    const y0 = channelPrice(yellowCh, 0, spot.t);
-    const yRed = channelPrice(yellowCh, 0.382, spot.t);
-    const p0 = channelPrice(purpleCh, 0, spot.t);
-    const pRed = channelPrice(purpleCh, 0.382, spot.t);
-    const yBand = px >= y0 && px < yRed ? "gray band" : px < y0 ? "under the gray band" : "above the gray band";
-    const pBand = px >= p0 && px < pRed ? "gray band" : px < p0 ? "under the gray band" : "above the gray band";
+  if (yellowCh && purpleCh && flatCh && flatBack) {
+    const yBand = bandAt(yellowCh, px, spot.t);
+    const pBand = bandAt(purpleCh, px, spot.t);
+    const backBand = bandAt(flatBack, px, spot.t);
+    const flatBase = channelPrice(flatCh, 0, spot.t);
     read +=
-      ` It sits in the ${yBand} of the flatter channel (base ${placeLine(px, y0)}, red band begins at ${placeLine(px, yRed)}).` +
-      ` It sits in the ${pBand} of the steeper channel (base ${placeLine(px, p0)}, red band begins at ${placeLine(px, pRed)}).`;
+      ` Inside the lattice it sits in the ${yBand.name} band of the flatter rising channel` +
+      ` (${fmtPrice(yBand.lo)} to ${fmtPrice(yBand.hi)})` +
+      ` and the ${pBand.name} band of the steeper rising channel` +
+      ` (${fmtPrice(pBand.lo)} to ${fmtPrice(pBand.hi)}).` +
+      ` It is just under the flat channel base at ${fmtPrice(flatBase)},` +
+      ` in the ${backBand.name} band of that channel's back channel` +
+      ` (${fmtPrice(backBand.lo)} to ${fmtPrice(backBand.hi)}).`;
   }
   document.getElementById("read").textContent = read;
 
@@ -712,9 +716,10 @@ function renderSide() {
     why.className = "why";
     if (row.ratio === 0) why.textContent = "Gray band, from the base up to 0.382. The base is the hidden trend line.";
     else if (row.ratio === 0.382) why.textContent = "Red band, from 0.382 to 0.5.";
-    else if (row.ratio === 0.5) why.textContent = "Green band, from 0.5 to 0.618.";
-    else if (row.ratio === 0.618) why.textContent = "Blue band starts here and runs to the 1.0 rail.";
-    else why.textContent = "Blue rail. Top of the blue band.";
+    else if (row.ratio === 0.5) why.textContent = "Green band, from 0.5 to the cyan 0.618.";
+    else if (row.ratio === 0.618) why.textContent = "Cyan band, from 0.618 to 0.786. The next channel on that slope starts here.";
+    else if (row.ratio === 0.786) why.textContent = "Purple band, from 0.786 to the blue rail.";
+    else why.textContent = "Blue rail. Top of the purple band.";
     card.append(h2, why);
     box.appendChild(card);
   }
@@ -748,7 +753,7 @@ function renderSide() {
   const channelsBox = document.getElementById("channels");
   if (channelsBox) {
     channelsBox.innerHTML = "";
-    for (const ch of finishedChannels()) {
+    for (const ch of state.channels) {
       const card = document.createElement("article");
       card.className = "card";
       const h2 = document.createElement("h2");
