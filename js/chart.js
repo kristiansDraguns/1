@@ -127,7 +127,19 @@ function fitAll() {
 }
 
 function drawnChannels() {
-  return state.channels;
+  if (state.viewName !== "swing") return state.channels;
+  // The swing chart keeps two directions and the line the circle sits on.
+  // The extra copies of the yellow slope stay off. He hides the busy ones.
+  const keep = new Set([
+    "yellow-up",
+    "purple-up",
+    "purple-below",
+    "purple-from-618",
+    "blue-flat",
+    "blue-below",
+    "blue-from-618",
+  ]);
+  return state.channels.filter((ch) => keep.has(ch.id));
 }
 
 function frameChannels() {
@@ -161,7 +173,20 @@ function setTime(t0, t1) {
   fitPrice();
 }
 
+function frameSwing() {
+  // Wide enough for the grid circle's rings and the flat-versus-rising crossings.
+  const t0 = Date.UTC(2024, 0, 1) / 1000;
+  const t1 = Date.UTC(2026, 11, 20) / 1000;
+  state.view = {
+    t0,
+    t1,
+    log0: Math.log(36000),
+    log1: Math.log(160000),
+  };
+}
+
 function applyView(name) {
+  state.viewName = name;
   const cs = candles();
   const last = cs[cs.length - 1].t;
   for (const b of document.querySelectorAll("#views button")) {
@@ -169,6 +194,10 @@ function applyView(name) {
   }
   if (name === "fit") {
     fitAll();
+    return;
+  }
+  if (name === "swing") {
+    frameSwing();
     return;
   }
   if (name === "channels") {
@@ -238,6 +267,10 @@ function draw() {
   drawChannelFills();
   drawCandles();
   drawChannelEdges();
+  if (state.viewName === "swing") {
+    drawSwingMarkers();
+    drawCircles();
+  }
   ctx.restore();
   drawAxes();
   drawCrosshair();
@@ -454,6 +487,33 @@ function drawChannelEdges() {
       ctx.lineTo(xOf(t1), yOf(channelPrice(ch, level, t1)));
       ctx.stroke();
     }
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawSwingMarkers() {
+  // The lines he traces so the strongest levels stay visible once more channels are on.
+  const marks = [
+    ["purple-up", 0],
+    ["purple-up", 0.618],
+    ["purple-up", 1],
+    ["blue-flat", 0],
+    ["blue-flat", 0.618],
+    ["blue-flat", 1],
+    ["yellow-up", 0.5],
+  ];
+  const t0 = state.view.t0;
+  const t1 = state.view.t1;
+  for (const [id, level] of marks) {
+    const ch = state.channels.find((item) => item.id === id);
+    if (!ch) continue;
+    ctx.beginPath();
+    ctx.strokeStyle = id === "yellow-up" ? "#f0a35e" : "#f4f1e8";
+    ctx.globalAlpha = 0.95;
+    ctx.lineWidth = level === 0 || level === 1 ? 2 : 1.4;
+    ctx.moveTo(xOf(t0), yOf(channelPrice(ch, level, t0)));
+    ctx.lineTo(xOf(t1), yOf(channelPrice(ch, level, t1)));
+    ctx.stroke();
   }
   ctx.globalAlpha = 1;
 }
@@ -701,6 +761,19 @@ function renderSide() {
       ` It is just under the flat channel base at ${fmtPrice(flatBase)},` +
       ` in the ${backBand.name} band of that channel's back channel` +
       ` (${fmtPrice(backBand.lo)} to ${fmtPrice(backBand.hi)}).`;
+    if (state.viewName === "swing") {
+      const circle = state.circles.find((item) => item.id === "channel-grid");
+      if (circle && state.circleScale) {
+        const g = circleGeom(circle);
+        const dt = (spot.t - g.tc) / g.sx;
+        const pastHalf = Math.abs(dt) > 0.5 * g.r1;
+        const inside = Math.abs(dt) < g.r1;
+        read +=
+          ` On the grid circle it is ${pastHalf ? "to the right of the 0.5 ring" : "inside the 0.5 ring"}` +
+          ` and ${inside ? "inside the 1.0 ring" : "outside the 1.0 ring"}.` +
+          ` The flat base just overhead is the nearest resistance. A cross of that base with a rising level is the double resistance.`;
+      }
+    }
   }
   document.getElementById("read").textContent = read;
 
@@ -908,7 +981,7 @@ async function main() {
       b.classList.toggle("active", b.dataset.tf === tf);
     }
   }
-  applyView(params.get("view") || "channels");
+  applyView(params.get("view") || "swing");
   document.getElementById("loading").classList.add("hidden");
   renderSide();
   resize();

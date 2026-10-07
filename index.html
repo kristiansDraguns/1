@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-      <title>BTC fib channels · 6 Oct 2026</title>
+      <title>BTC swing chart · 6 Oct 2026</title>
   <link rel="stylesheet" href="css/chart.css">
 </head>
 <body>
@@ -20,7 +20,8 @@
         <button type="button" data-tf="1h">1H</button>
       </div>
       <div class="group" id="views">
-        <button type="button" data-view="channels" class="active">Channels</button>
+        <button type="button" data-view="swing" class="active">Swing</button>
+        <button type="button" data-view="channels">Channels</button>
         <button type="button" data-view="macro">Macro</button>
         <button type="button" data-view="y2022">2022–</button>
         <button type="button" data-view="y2026">2026</button>
@@ -35,11 +36,11 @@
       <div id="loading">Loading Bitfinex BTC candles…</div>
     </div>
     <aside id="legend">
-      <h1>Fib channels</h1>
+      <h1>Swing chart</h1>
       <p class="asof" id="asof"></p>
       <div id="read"></div>
-      <h1>Channel bands</h1>
-      <p class="foot">Filled fib channels on two angles. The rising channels follow the cycle floor and the rising support. The flat channel follows the ceiling and cuts across them. A back channel sits under each base, and another channel is built off each cyan 0.618. From each base the bands are gray, red, green, cyan, and purple, up to the blue rail.</p>
+      <h1>How it is built</h1>
+      <p class="foot">Two filled fib-channel directions. The rising ones follow the cycle floor and the rising support. The flat one follows the ceiling. Each is built upward from the cyan 0.618, with a back channel under the base. The light lines mark the base, the 0.618, and the blue rail, the levels he keeps when the chart gets busy. The orange circle runs from one crossing on the yellow 0.5 line to the next crossing on that same line.</p>
       <div id="lines"></div>
       <div id="channels"></div>
       <p class="foot" id="audit"></p>
