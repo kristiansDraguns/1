@@ -145,6 +145,47 @@
         }
       ],
       "why": "A second construction, on the yellow cycle floor, sized for the current path. The 0.236 ring is support at the 20 Aug reclaim and the 2 Sep low. The 0.618 ring is the ceiling at the 21 Sep high and the 2 Oct high. The 0.786 ring is the next one above that."
+    },
+    {
+      "id": "channel-grid",
+      "lineId": "yellow",
+      "logOffset": 0.468767733365959,
+      "name": "Channel grid circle",
+      "color": "#f0a35e",
+      "anchors": [1673205335.19, 1797469265.406024],
+      "show": [0.5, 1],
+      "faint": [],
+      "touches": [
+        {
+          "t": 1701993600,
+          "p": 44699,
+          "level": 0.5,
+          "role": "resistance",
+          "label": "8 Dec 2023 high"
+        },
+        {
+          "t": 1752451200,
+          "p": 123120,
+          "level": 0.5,
+          "role": "resistance",
+          "label": "14 Jul 2025 high"
+        },
+        {
+          "t": 1758758400,
+          "p": 108880,
+          "level": 0.5,
+          "role": "support",
+          "label": "25 Sep 2025 low"
+        },
+        {
+          "t": 1762214400,
+          "p": 99045,
+          "level": 0.5,
+          "role": "support",
+          "label": "4 Nov 2025 low"
+        }
+      ],
+      "why": "Both handles are intersections on the yellow channel's blue 0.5 line: the purple aqua 0.618 on 8 Jan 2023, and the purple 0.5 line on 17 Dec 2026. The 0.5 ring is the 8 Dec 2023 high and the 14 Jul 2025 high, then support at the 25 Sep and 4 Nov 2025 lows. By 6 Oct 2026 price has moved to the right of that 0.5 ring and still sits inside the 1.0 ring."
     }
   ]
 }

@@ -1,0 +1,268 @@
+{
+  "levels": [
+    {
+      "ratio": 0.236,
+      "color": "#e15a6a",
+      "name": "red"
+    },
+    {
+      "ratio": 0.382,
+      "color": "#3cba7a",
+      "name": "green"
+    },
+    {
+      "ratio": 0.5,
+      "color": "#6cb6ff",
+      "name": "blue"
+    },
+    {
+      "ratio": 0.618,
+      "color": "#3ee0d2",
+      "name": "aqua"
+    },
+    {
+      "ratio": 0.786,
+      "color": "#d2a6f5",
+      "name": "violet"
+    },
+    {
+      "ratio": 1,
+      "color": "#e7eef6",
+      "name": "white"
+    }
+  ],
+  "channels": [
+    {
+      "id": "yellow-up",
+      "name": "Yellow channel",
+      "lineId": "yellow",
+      "origin": 0,
+      "width": 0.937535466731918,
+      "dash": false,
+      "anchor": {
+        "t": 1716249600,
+        "p": 71922,
+        "level": 1,
+        "label": "21 May 2024 high"
+      },
+      "why": "The gray base is the yellow cycle floor, the shallower of the two kept lines. The white 1.0 rail is the 21 May 2024 high. The same rail also meets the 30 May 2022 high and the 6 Sep 2019 high. Levels stack upward, the same direction as the purple channel.",
+      "touches": [
+        {
+          "t": 1716249600,
+          "p": 71922.0,
+          "level": 1,
+          "role": "resistance",
+          "label": "21 May 2024 high"
+        },
+        {
+          "t": 1653868800,
+          "p": 32503.0,
+          "level": 1,
+          "role": "resistance",
+          "label": "30 May 2022 high"
+        },
+        {
+          "t": 1567728000,
+          "p": 10933.0,
+          "level": 1,
+          "role": "resistance",
+          "label": "6 Sep 2019 high"
+        },
+        {
+          "t": 1577059200,
+          "p": 7715.1,
+          "level": 0.5,
+          "role": "resistance",
+          "label": "23 Dec 2019 high"
+        },
+        {
+          "t": 1766016000,
+          "p": 84562.0,
+          "level": 0.5,
+          "role": "support",
+          "label": "18 Dec 2025 low"
+        },
+        {
+          "t": 1588809600,
+          "p": 10045.0,
+          "level": 0.618,
+          "role": "resistance",
+          "label": "7 May 2020 high"
+        },
+        {
+          "t": 1537315200,
+          "p": 6100.0,
+          "level": 0.786,
+          "role": "support",
+          "label": "19 Sep 2018 low"
+        },
+        {
+          "t": 1724544000,
+          "p": 65200.0,
+          "level": 0.786,
+          "role": "resistance",
+          "label": "25 Aug 2024 high"
+        },
+        {
+          "t": 1500508800,
+          "p": 2922.0,
+          "level": 0.5,
+          "role": "resistance",
+          "label": "20 Jul 2017 high"
+        }
+      ]
+    },
+    {
+      "id": "purple-up",
+      "name": "Purple channel",
+      "lineId": "purple",
+      "origin": 0,
+      "width": 0.7545765258758287,
+      "dash": false,
+      "anchor": {
+        "t": 1713484800,
+        "p": 59675,
+        "level": 1,
+        "label": "19 Apr 2024 low"
+      },
+      "why": "The base is the steeper purple rising support. The two bases cross near the November 2022 low, which is the pair of intersecting channels. The white 1.0 rail is the 19 Apr 2024 low. The aqua 0.618 meets the 25 May 2020 low and the 13 Sep 2022 high.",
+      "touches": [
+        {
+          "t": 1713484800,
+          "p": 59675.0,
+          "level": 1,
+          "role": "support",
+          "label": "19 Apr 2024 low"
+        },
+        {
+          "t": 1570752000,
+          "p": 8815.3,
+          "level": 1,
+          "role": "resistance",
+          "label": "11 Oct 2019 high"
+        },
+        {
+          "t": 1663027200,
+          "p": 22794.0,
+          "level": 0.618,
+          "role": "resistance",
+          "label": "13 Sep 2022 high"
+        },
+        {
+          "t": 1590364800,
+          "p": 8620.0,
+          "level": 0.618,
+          "role": "support",
+          "label": "25 May 2020 low"
+        },
+        {
+          "t": 1766361600,
+          "p": 90606.0,
+          "level": 0.618,
+          "role": "resistance",
+          "label": "22 Dec 2025 high"
+        },
+        {
+          "t": 1586217600,
+          "p": 7454.3,
+          "level": 0.5,
+          "role": "resistance",
+          "label": "7 Apr 2020 high"
+        },
+        {
+          "t": 1682294400,
+          "p": 26978.0,
+          "level": 0.5,
+          "role": "support",
+          "label": "24 Apr 2023 low"
+        },
+        {
+          "t": 1600473600,
+          "p": 11185.0,
+          "level": 0.786,
+          "role": "resistance",
+          "label": "19 Sep 2020 high"
+        },
+        {
+          "t": 1658275200,
+          "p": 24276.0,
+          "level": 0.786,
+          "role": "resistance",
+          "label": "20 Jul 2022 high"
+        }
+      ]
+    },
+    {
+      "id": "purple-back",
+      "name": "Back channel from the 0.618",
+      "lineId": "purple",
+      "origin": 0.4663282929912621,
+      "width": 0.4663282929912621,
+      "dash": true,
+      "show": [
+        0.382,
+        0.5,
+        0.786,
+        1
+      ],
+      "anchor": {
+        "t": 1755129600,
+        "p": 123640,
+        "level": 1,
+        "label": "14 Aug 2025 high"
+      },
+      "why": "Built the way he prefers: the new base sits on the purple aqua 0.618, and this channel's own 0.618 sits on the purple white 1.0, so two lines already match. The new white 1.0 is the line this adds. It is resistance at the 14 Aug 2025 high and the 30 May 2019 high. Dashed so it stays distinct from the channel it was copied from.",
+      "touches": [
+        {
+          "t": 1590969600,
+          "p": 10398.0,
+          "level": 0.382,
+          "role": "resistance",
+          "label": "1 Jun 2020 high"
+        },
+        {
+          "t": 1730678400,
+          "p": 66880.0,
+          "level": 0.382,
+          "role": "support",
+          "label": "4 Nov 2024 low"
+        },
+        {
+          "t": 1724544000,
+          "p": 65200.0,
+          "level": 0.5,
+          "role": "resistance",
+          "label": "25 Aug 2024 high"
+        },
+        {
+          "t": 1534204800,
+          "p": 5858.6,
+          "level": 0.786,
+          "role": "support",
+          "label": "14 Aug 2018 low"
+        },
+        {
+          "t": 1714953600,
+          "p": 65628.0,
+          "level": 0.786,
+          "role": "resistance",
+          "label": "6 May 2024 high"
+        },
+        {
+          "t": 1755129600,
+          "p": 123640.0,
+          "level": 1,
+          "role": "resistance",
+          "label": "14 Aug 2025 high"
+        },
+        {
+          "t": 1559174400,
+          "p": 9109.0,
+          "level": 1,
+          "role": "resistance",
+          "label": "30 May 2019 high"
+        }
+      ]
+    }
+  ]
+}

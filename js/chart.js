@@ -6,6 +6,8 @@ const state = {
   series: {},
   lines: [],
   circles: [],
+  channels: [],
+  channelLevels: [],
   circleScale: null,
   view: null,
   drag: null,
@@ -211,10 +213,12 @@ function draw() {
   ctx.clip();
   drawCandles();
   drawLines();
+  drawChannels();
   drawCircles();
   drawDots();
   ctx.restore();
   drawLineLabels();
+  drawChannelLabels();
   drawCircleLabels();
   drawAxes();
   drawCrosshair();
@@ -379,6 +383,66 @@ function drawLineLabels() {
   }
 }
 
+function levelColor(ratio) {
+  const row = state.channelLevels.find((item) => item.ratio === ratio);
+  return row ? row.color : "#e7eef6";
+}
+
+function channelPrice(ch, level, t) {
+  const line = state.lines.find((item) => item.id === ch.lineId);
+  return Math.exp(Math.log(priceOnLine(line, t)) + ch.origin + level * ch.width);
+}
+
+function drawChannels() {
+  for (const ch of state.channels) {
+    const levels = ch.show || state.channelLevels.map((item) => item.ratio);
+    for (const level of levels) {
+      ctx.strokeStyle = levelColor(level);
+      ctx.lineWidth = level === 0.618 || level === 1 ? 1.35 : 1;
+      ctx.setLineDash(ch.dash ? [3, 4] : []);
+      ctx.globalAlpha = ch.dash ? 0.75 : 0.88;
+      ctx.beginPath();
+      ctx.moveTo(xOf(state.view.t0), yOf(channelPrice(ch, level, state.view.t0)));
+      ctx.lineTo(xOf(state.view.t1), yOf(channelPrice(ch, level, state.view.t1)));
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+    if (!ch.anchor) continue;
+    const x = xOf(ch.anchor.t);
+    const y = yOf(ch.anchor.p);
+    ctx.strokeStyle = levelColor(ch.anchor.level);
+    ctx.lineWidth = 1.4;
+    ctx.strokeRect(x - 3.5, y - 3.5, 7, 7);
+  }
+}
+
+function drawChannelLabels() {
+  if (!state.view) return;
+  const w = plot();
+  ctx.font = "11px ui-sans-serif, system-ui, sans-serif";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  const placed = [];
+  const tLabel = state.view.t1;
+  for (const ch of state.channels) {
+    const levels = (ch.show || state.channelLevels.map((item) => item.ratio)).filter(
+      (level) => level === 0.618 || level === 1
+    );
+    for (const level of levels) {
+      let y = yOf(channelPrice(ch, level, tLabel));
+      if (y < w.y + 10 || y > w.y + w.h - 10) continue;
+      for (const py of placed) {
+        if (Math.abs(py - y) < 12) y = py - 12;
+      }
+      placed.push(y);
+      ctx.fillStyle = levelColor(level);
+      const tag = ch.dash ? "back " : "";
+      ctx.fillText(`${tag}${level}`, w.x + 6, y);
+    }
+  }
+}
+
 function barOpen(t) {
   const sec = TF_SEC[state.tf];
   return Math.floor(t / sec) * sec;
@@ -400,6 +464,16 @@ function drawDots() {
       ctx.stroke();
     }
   }
+  for (const ch of state.channels) {
+    for (const touch of ch.touches) {
+      const bt = barOpen(touch.t);
+      if (bt < state.view.t0 - TF_SEC[state.tf] || bt > state.view.t1) continue;
+      ctx.beginPath();
+      ctx.fillStyle = levelColor(touch.level);
+      ctx.arc(xOf(bt), yOf(touch.p), 2.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
   if (!state.circleScale) return;
   for (const circle of state.circles) {
     const g = circleGeom(circle);
@@ -419,13 +493,14 @@ function drawDots() {
 function circleGeom(circle) {
   const line = state.lines.find((item) => item.id === circle.lineId);
   const [tA, tB] = circle.anchors;
-  const pA = priceOnLine(line, tA);
-  const pB = priceOnLine(line, tB);
+  const off = circle.logOffset || 0;
+  const pA = priceOnLine(line, tA) * Math.exp(off);
+  const pB = priceOnLine(line, tB) * Math.exp(off);
   const tc = (tA + tB) / 2;
   const lc = (Math.log(pA) + Math.log(pB)) / 2;
   const { sx, sy } = state.circleScale;
   const r1 = Math.hypot((tA - tc) / sx, (Math.log(pA) - lc) / sy);
-  return { line, tA, tB, tc, lc, r1, sx, sy };
+  return { line, tA, tB, tc, lc, r1, sx, sy, off };
 }
 
 function ringPricesAt(g, level, t) {
@@ -478,7 +553,7 @@ function drawCircles() {
     ctx.setLineDash([]);
     for (const t of circle.anchors) {
       const x = xOf(t);
-      const y = yOf(priceOnLine(g.line, t));
+      const y = yOf(priceOnLine(g.line, t) * Math.exp(g.off));
       ctx.strokeStyle = circle.color;
       ctx.lineWidth = 1.4;
       ctx.strokeRect(x - 3.5, y - 3.5, 7, 7);
@@ -586,9 +661,21 @@ function renderSide() {
         `That ring capped the 21 Sep and 2 Oct highs.`;
     }
   }
+  let channelNote = "";
+  const yellowCh = state.channels.find((ch) => ch.id === "yellow-up");
+  const purpleCh = state.channels.find((ch) => ch.id === "purple-up");
+  if (yellowCh && purpleCh) {
+    const y236 = channelPrice(yellowCh, 0.236, last.t);
+    const p236 = channelPrice(purpleCh, 0.236, last.t);
+    const yGap = (px / y236 - 1) * 100;
+    const pGap = (px / p236 - 1) * 100;
+    channelNote =
+      ` Above both channel bases, the next rails are the red 0.236 lines: yellow ${fmtPrice(y236)} (${Math.abs(yGap).toFixed(1)}% ${yGap >= 0 ? "below" : "above"} the close) and purple ${fmtPrice(p236)} (${Math.abs(pGap).toFixed(1)}% ${pGap >= 0 ? "below" : "above"} the close).`;
+  }
   document.getElementById("read").textContent =
     `The blue ceiling is ${rel(blue)}. Purple support is ${rel(purple)}. The yellow floor is ${rel(yellow)}.` +
-    ringNote;
+    ringNote +
+    channelNote;
 
   const box = document.getElementById("lines");
   box.innerHTML = "";
@@ -646,6 +733,30 @@ function renderSide() {
       circlesBox.appendChild(card);
     }
     worst = Math.max(worst, circleWorst);
+  }
+  const channelsBox = document.getElementById("channels");
+  if (channelsBox) {
+    channelsBox.innerHTML = "";
+    for (const ch of state.channels) {
+      const card = document.createElement("article");
+      card.className = "card";
+      const h2 = document.createElement("h2");
+      h2.textContent = ch.name;
+      const why = document.createElement("p");
+      why.className = "why";
+      why.textContent = ch.why;
+      const ul = document.createElement("ul");
+      for (const touch of ch.touches) {
+        const lv = channelPrice(ch, touch.level, touch.t);
+        const err = (touch.p / lv - 1) * 100;
+        worst = Math.max(worst, Math.abs(err));
+        const li = document.createElement("li");
+        li.innerHTML = `${touch.label} · ${touch.level} ${touch.role} <span class="err">${err >= 0 ? "+" : ""}${err.toFixed(2)}%</span>`;
+        ul.appendChild(li);
+      }
+      card.append(h2, why, ul);
+      channelsBox.appendChild(card);
+    }
   }
   const audit = document.getElementById("audit");
   audit.textContent = `Claimed touches stay on the fixed slope and the fixed rings. Largest gap is ${worst.toFixed(2)}%. Pan and timeframe switches do not move them.`;
@@ -760,12 +871,13 @@ function parseSeries(doc) {
 
 async function main() {
   wire();
-  const [d1, h4, h1, linesDoc, circlesDoc] = await Promise.all([
+  const [d1, h4, h1, linesDoc, circlesDoc, channelsDoc] = await Promise.all([
     fetch("data/btc-1d.json").then((r) => r.json()),
     fetch("data/btc-4h.json").then((r) => r.json()),
     fetch("data/btc-1h.json").then((r) => r.json()),
     fetch("data/lines.json").then((r) => r.json()),
     fetch("data/circles.json").then((r) => r.json()),
+    fetch("data/channels.json").then((r) => r.json()),
   ]);
   state.series["1d"] = parseSeries(d1);
   state.series["4h"] = parseSeries(h4);
@@ -773,6 +885,8 @@ async function main() {
   state.lines = linesDoc.lines;
   state.circles = circlesDoc.circles;
   state.circleScale = circlesDoc.scale;
+  state.channels = channelsDoc.channels;
+  state.channelLevels = channelsDoc.levels;
   const params = new URLSearchParams(location.search);
   const tf = params.get("tf");
   if (tf && state.series[tf]) {
