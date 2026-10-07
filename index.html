@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+      <title>BTC rings from rings · 6 Oct 2026</title>
+  <link rel="stylesheet" href="css/chart.css">
+</head>
+<body>
+  <header>
+    <div class="title">
+      <strong>BTCUSD</strong>
+      <span class="muted">Bitfinex</span>
+      <span class="badge">LOG</span>
+    </div>
+    <div class="tools" role="toolbar" aria-label="Chart controls">
+      <div class="group" id="tf">
+        <button type="button" data-tf="1d">1D</button>
+        <button type="button" data-tf="4h" class="active">4H</button>
+        <button type="button" data-tf="1h">1H</button>
+      </div>
+      <div class="group" id="views">
+        <button type="button" data-view="rings" class="active">Rings</button>
+        <button type="button" data-view="blocks">Blocks</button>
+        <button type="button" data-view="swing">Swing</button>
+        <button type="button" data-view="channels">Channels</button>
+        <button type="button" data-view="macro">Macro</button>
+        <button type="button" data-view="y2022">2022–</button>
+        <button type="button" data-view="y2026">2026</button>
+        <button type="button" data-view="fit">Fit</button>
+      </div>
+    </div>
+    <div class="hint">Drag to pan · scroll to zoom · lines stay on their prices</div>
+  </header>
+  <main>
+    <div id="stage">
+      <canvas id="chart"></canvas>
+      <div id="loading">Loading Bitfinex BTC candles…</div>
+    </div>
+    <aside id="legend">
+      <h1 id="legend-title">Rings from rings</h1>
+      <p class="asof" id="asof"></p>
+      <div id="read"></div>
+      <h1>How it is built</h1>
+      <p class="foot" id="legend-foot">Fib circles nested on one trend line, the rising support. The yellow circle runs from point to point on that line. Each later circle stops where a ring of an earlier circle crosses the same line. Orange is lined up on the yellow 0.618 ring, and green on the yellow 0.5 ring. The channel blocks stay behind them, dimmed. The red circle is the thick one near price.</p>
+      <div id="lines"></div>
+      <div id="channels"></div>
+      <p class="foot" id="audit"></p>
+    </aside>
+  </main>
+  <script src="js/chart.js"></script>
+</body>
+</html>

@@ -1,0 +1,168 @@
+{
+  "source": "Bitfinex tBTCUSD",
+  "asOf": "2026-10-06T20:00:00Z",
+  "lines": [
+    {
+      "id": "yellow",
+      "name": "Cycle floor",
+      "color": "#f0c14d",
+      "ref": [
+        {
+          "t": 1500206400,
+          "p": 1826.2,
+          "role": "support",
+          "label": "16 Jul 2017 low"
+        },
+        {
+          "t": 1544875200,
+          "p": 3215.2,
+          "role": "support",
+          "label": "15 Dec 2018 low"
+        }
+      ],
+      "touches": [
+        {
+          "t": 1406764800,
+          "p": 561.47,
+          "role": "support",
+          "label": "31 Jul 2014 low"
+        },
+        {
+          "t": 1500206400,
+          "p": 1826.2,
+          "role": "support",
+          "label": "16 Jul 2017 low"
+        },
+        {
+          "t": 1544875200,
+          "p": 3215.2,
+          "role": "support",
+          "label": "15 Dec 2018 low"
+        },
+        {
+          "t": 1549468800,
+          "p": 3405.32458599,
+          "role": "support",
+          "label": "6 Feb 2019 low"
+        },
+        {
+          "t": 1669064400,
+          "p": 15487.0,
+          "role": "support",
+          "label": "21 Nov 2022 low"
+        },
+        {
+          "t": 1784642400,
+          "p": 66990.0,
+          "role": "resistance",
+          "label": "21 Jul 2026 high"
+        },
+        {
+          "t": 1787198400,
+          "p": 69183.0,
+          "role": "support",
+          "label": "20 Aug 2026 low"
+        }
+      ],
+      "why": "The slope is fixed by the 16 Jul 2017 low and the 15 Dec 2018 low. The 6 Feb 2019 low and the 21 Nov 2022 low land on that line, and taken back it meets the 31 Jul 2014 low. In 2026 the break turned it into resistance on 21 Jul, then support again on the 20 Aug reclaim. Price is still above it."
+    },
+    {
+      "id": "purple",
+      "name": "Rising support",
+      "color": "#c792ea",
+      "ref": [
+        {
+          "t": 1399334400,
+          "p": 419.4,
+          "role": "support",
+          "label": "6 May 2014 low"
+        },
+        {
+          "t": 1669064400,
+          "p": 15487.0,
+          "role": "support",
+          "label": "21 Nov 2022 low"
+        }
+      ],
+      "touches": [
+        {
+          "t": 1399334400,
+          "p": 419.4,
+          "role": "support",
+          "label": "6 May 2014 low"
+        },
+        {
+          "t": 1669064400,
+          "p": 15487.0,
+          "role": "support",
+          "label": "21 Nov 2022 low"
+        },
+        {
+          "t": 1770336000,
+          "p": 60100.0,
+          "role": "support",
+          "label": "6 Feb 2026 low"
+        },
+        {
+          "t": 1788343200,
+          "p": 76321.0,
+          "role": "support",
+          "label": "2 Sep 2026 low"
+        }
+      ],
+      "why": "Drawn from the 6 May 2014 low and the 21 Nov 2022 low, then checked forward. The 6 Feb 2026 low and the 2 Sep 2026 low are on it. All four are support. It crosses the yellow line at the 2022 bottom. July broke under it and September tagged it again. Price is above it now."
+    },
+    {
+      "id": "blue",
+      "name": "Ceiling",
+      "color": "#6cb6ff",
+      "ref": [
+        {
+          "t": 1623772800,
+          "p": 41273.0,
+          "role": "resistance",
+          "label": "15 Jun 2021 high"
+        },
+        {
+          "t": 1778065200,
+          "p": 82818.0,
+          "role": "resistance",
+          "label": "6 May 2026 high"
+        }
+      ],
+      "touches": [
+        {
+          "t": 1623772800,
+          "p": 41273.0,
+          "role": "resistance",
+          "label": "15 Jun 2021 high"
+        },
+        {
+          "t": 1710910800,
+          "p": 60870.0,
+          "role": "support",
+          "label": "20 Mar 2024 low"
+        },
+        {
+          "t": 1724626800,
+          "p": 65200.0,
+          "role": "resistance",
+          "label": "25 Aug 2024 high"
+        },
+        {
+          "t": 1778065200,
+          "p": 82818.0,
+          "role": "resistance",
+          "label": "6 May 2026 high"
+        },
+        {
+          "t": 1790020800,
+          "p": 87392.0,
+          "role": "resistance",
+          "label": "21 Sep 2026 high"
+        }
+      ],
+      "why": "The slope is fixed by the 15 Jun 2021 high and the 6 May 2026 high. The 25 Aug 2024 high and the 21 Sep 2026 high sit on it, and the 20 Mar 2024 wick reached it as support. Older highs and the current highs agree, and this is the ceiling directly over price. The 2 Oct 2026 high stopped short of it."
+    }
+  ]
+}
