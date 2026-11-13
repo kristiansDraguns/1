@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kraken PF_XBTUSD · 1m</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b0e11;
+      --text: #e8eef4;
+      --muted: #8b98a5;
+      --up: #3dd68c;
+      --down: #ff5d73;
+      --warn: #f0c14b;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font: 14px/1.35 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      min-height: 100%;
+      height: 100vh;
+    }
+    header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 16px 20px 10px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 620;
+      letter-spacing: 0.01em;
+    }
+    .sub {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .quote { text-align: right; }
+    #price {
+      font-size: 28px;
+      font-weight: 620;
+      letter-spacing: -0.03em;
+      font-variant-numeric: tabular-nums;
+    }
+    #price.up { color: var(--up); }
+    #price.down { color: var(--down); }
+    .feed {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--warn);
+    }
+    .dot.connected { background: var(--up); box-shadow: 0 0 0 3px rgba(61, 214, 140, 0.16); }
+    .dot.disconnected { background: var(--down); }
+    main {
+      flex: 1;
+      min-height: 0;
+      padding: 0 10px 10px;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Kraken PF_XBTUSD</h1>
+      <div class="sub" id="bar">BTC perpetual · USD · 1 minute</div>
+    </div>
+    <div class="quote">
+      <div id="price">—</div>
+      <div class="feed">
+        <span class="dot" id="dot"></span>
+        <span id="status">Connecting</span>
+      </div>
+    </div>
+  </header>
+  <main>
+    <canvas id="chart" aria-label="One-minute candlestick chart"></canvas>
+  </main>
+  <script src="chart.js"></script>
+</body>
+</html>
