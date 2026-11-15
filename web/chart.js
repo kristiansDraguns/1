@@ -1,6 +1,4 @@
 (() => {
-  const SYMBOL = "PF_XBTUSD";
-  const WS_URL = "wss://uws.kraken.com/v2/public";
   const HISTORY_MINUTES = 180;
   const MAX_BARS = 240;
 
@@ -87,7 +85,7 @@ function upsert(candle, source) {
       priceEl.textContent = "—";
       priceEl.dataset.price = "";
       priceEl.className = "";
-      barEl.textContent = "BTC perpetual · USD · 1 minute";
+      barEl.textContent = "BTC spot · USD · 1 minute";
       barEl.dataset.time = "";
       return;
     }
@@ -96,7 +94,7 @@ function upsert(candle, source) {
     priceEl.textContent = formatPrice(last.close);
     priceEl.dataset.price = String(last.close);
     priceEl.className = direction;
-    barEl.textContent = `BTC perpetual · USD · 1 minute · bar ${formatMinute(last.time)}`;
+    barEl.textContent = `BTC spot · USD · 1 minute · bar ${formatMinute(last.time)}`;
     barEl.dataset.time = String(last.time);
   }
 
@@ -254,39 +252,31 @@ function upsert(candle, source) {
   }
 
   async function loadHistory() {
-    const now = Math.floor(Date.now() / 1000);
-    const from = now - HISTORY_MINUTES * 60;
-    const query = `from=${from}&to=${now}&count=${HISTORY_MINUTES + 5}`;
-    const path = `/trade/${SYMBOL}/1m?${query}`;
-    // Kraken echoes Access-Control-Allow-Origin only for futures.kraken.com.
-    // The same charts path on this origin is the fallback while serving locally.
-    const urls = [
-      `https://futures.kraken.com/api/charts/v1${path}`,
-      `/api/charts/v1${path}`,
-    ];
-    let lastError = null;
-    for (const url of urls) {
-      try {
-        const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
-        if (!response.ok) throw new Error(`history ${response.status}`);
-        const payload = await response.json();
-        const candles = payload.candles || [];
-        for (const raw of candles) {
-          const candle = candleFrom(raw, Number(raw.time));
-          if (candle) upsert(candle, "rest");
-        }
-        if (candles.length) {
-          emptyNote = "";
-          scheduleDraw();
-          return;
-        }
-      } catch (error) {
-        lastError = error;
+    // Spot OHLC allows a normal browser. The perpetual chart feed does not.
+    const url = "https://api.kraken.com/0/public/OHLC?pair=XBTUSD&interval=1";
+    try {
+      const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      if (!response.ok) throw new Error(`history ${response.status}`);
+      const payload = await response.json();
+      const rows = payload.result && payload.result.XXBTZUSD;
+      if (!Array.isArray(rows) || !rows.length) throw new Error("history empty");
+      const recent = rows.slice(-HISTORY_MINUTES);
+      for (const row of recent) {
+        const candle = candleFrom(
+          { open: row[1], high: row[2], low: row[3], close: row[4] },
+          Number(row[0]) * 1000,
+        );
+        if (candle) upsert(candle, "rest");
       }
+      emptyNote = "";
+      setStatus("connected", "Connected");
+      scheduleDraw();
+    } catch (error) {
+      if (!bars.size) emptyNote = "Waiting for the live candle…";
+      setStatus("disconnected", "Reconnecting");
+      scheduleDraw();
+      console.warn(error);
     }
-    if (!bars.size) emptyNote = "Waiting for the live candle…";
-    scheduleDraw();
-    if (lastError) console.warn(lastError);
   }
 
   function applyWsCandle(raw) {
@@ -370,6 +360,5 @@ function upsert(candle, source) {
 
   new ResizeObserver(scheduleDraw).observe(canvas.parentElement);
   loadHistory();
-  connect();
-  setInterval(loadHistory, 60000);
+  setInterval(loadHistory, 2000);
 })();
