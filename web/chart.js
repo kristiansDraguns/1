@@ -1,6 +1,9 @@
 (() => {
   const HISTORY_MINUTES = 180;
   const MAX_BARS = 240;
+  const SMA_PERIOD = 20;
+  const OHLC_URL = "https://api.kraken.com/0/public/OHLC?pair=XBTUSD&interval=1";
+  const TRADES_URL = "https://api.kraken.com/0/public/Trades?pair=XBTUSD";
 
   const priceEl = document.getElementById("price");
   const statusEl = document.getElementById("status");
@@ -14,22 +17,16 @@
   const axis = "#8b98a5";
   const up = "#3dd68c";
   const down = "#ff5d73";
+  const smaColor = "#f0c14b";
 
   const bars = new Map();
-  let socket = null;
-  let reconnectDelay = 1000;
-  let pingTimer = 0;
-  let watchTimer = 0;
-  let lastMessageAt = 0;
+  const flow = new Map();
+  const seenTrades = new Set();
+  let flowCursor = "";
+  let flowLoading = false;
   let drawQueued = false;
   let emptyNote = "Loading candles…";
-
-  function parseTime(value) {
-    if (typeof value === "number") return value;
-    const text = String(value).replace(/\.(\d{3})\d+/, ".$1");
-    const time = Date.parse(text);
-    return Number.isFinite(time) ? time : NaN;
-  }
+  let feedLabel = "Connecting";
 
   function candleFrom(raw, time) {
     const open = Number(raw.open);
@@ -50,15 +47,15 @@
     for (const candle of all.slice(0, all.length - MAX_BARS)) bars.delete(candle.time);
   }
 
-function upsert(candle, source) {
-  const prev = bars.get(candle.time);
-  if (source === "rest" && prev?.source === "ws") {
-    const latest = Math.max(...bars.keys());
-    if (candle.time >= latest) return;
+  function upsert(candle, source) {
+    const prev = bars.get(candle.time);
+    if (source === "rest" && prev?.source === "ws") {
+      const latest = Math.max(...bars.keys());
+      if (candle.time >= latest) return;
+    }
+    bars.set(candle.time, { ...candle, source });
+    trim();
   }
-  bars.set(candle.time, { ...candle, source });
-  trim();
-}
 
   function formatPrice(value) {
     return value.toLocaleString("en-US", {
@@ -67,16 +64,61 @@ function upsert(candle, source) {
     });
   }
 
+  function formatDelta(value) {
+    const abs = Math.abs(value);
+    const digits = abs >= 100 ? 1 : abs >= 10 ? 2 : 3;
+    const body = abs.toLocaleString("en-US", {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    });
+    if (value > 0) return `+${body}`;
+    if (value < 0) return `-${body}`;
+    return body;
+  }
+
   function formatMinute(time) {
     const date = new Date(time);
     const pad = (n) => String(n).padStart(2, "0");
     return `${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())} UTC`;
   }
 
+  function flowBars() {
+    if (!flow.size) return [];
+    const start = Math.min(...flow.keys());
+    const end = Math.max(...flow.keys());
+    const rows = [];
+    for (let time = start; time <= end; time += 60000) {
+      rows.push({ time, delta: flow.get(time) || 0, sma: null });
+    }
+    let sum = 0;
+    for (let i = 0; i < rows.length; i++) {
+      sum += rows[i].delta;
+      if (i >= SMA_PERIOD) sum -= rows[i - SMA_PERIOD].delta;
+      if (i >= SMA_PERIOD - 1) rows[i].sma = sum / SMA_PERIOD;
+    }
+    return rows;
+  }
+
   function setStatus(state, label) {
-    statusEl.textContent = label;
+    feedLabel = label;
     statusEl.dataset.state = state;
     dotEl.className = "dot" + (state === "connecting" ? "" : " " + state);
+    renderStatus();
+  }
+
+  function renderStatus() {
+    const rows = flowBars();
+    const last = rows[rows.length - 1];
+    if (!last) {
+      statusEl.textContent = feedLabel;
+      delete statusEl.dataset.delta;
+      delete statusEl.dataset.sma;
+      return;
+    }
+    const smaText = last.sma == null ? "—" : formatDelta(last.sma);
+    statusEl.textContent = `${feedLabel} · delta ${formatDelta(last.delta)} BTC · SMA ${smaText}`;
+    statusEl.dataset.delta = String(last.delta);
+    statusEl.dataset.sma = last.sma == null ? "" : String(last.sma);
   }
 
   function renderQuote(data) {
@@ -100,6 +142,7 @@ function upsert(candle, source) {
 
   function scheduleDraw() {
     renderQuote(series());
+    renderStatus();
     if (drawQueued) return;
     drawQueued = true;
     requestAnimationFrame(() => {
@@ -143,8 +186,8 @@ function upsert(candle, source) {
     const data = series();
     const pad = { left: 12, right: 84, top: 14, bottom: 28 };
     const plotW = width - pad.left - pad.right;
-    const plotH = height - pad.top - pad.bottom;
-    if (plotW < 20 || plotH < 20) return;
+    const available = height - pad.top - pad.bottom;
+    if (plotW < 20 || available < 40) return;
 
     if (!data.length) {
       ctx.fillStyle = axis;
@@ -155,61 +198,62 @@ function upsert(candle, source) {
       return;
     }
 
-    const slot = Math.min(10, plotW / data.length);
+    const gap = 18;
+    const flowH = Math.max(78, Math.round(available * 0.28));
+    const priceH = available - flowH - gap;
+    const priceTop = pad.top;
+    const flowTop = priceTop + priceH + gap;
+
+    const times = data.map((candle) => candle.time);
+    if (flow.size) {
+      const latestFlow = Math.max(...flow.keys());
+      if (latestFlow > times[times.length - 1]) times.push(latestFlow);
+    }
+    const slot = Math.min(10, plotW / times.length);
     const viewCount = Math.max(1, Math.floor(plotW / slot));
-    const view = data.slice(-viewCount);
+    const view = times.slice(-viewCount);
     const originX = pad.left + plotW - slot * view.length;
+    const candles = new Map(data.map((candle) => [candle.time, candle]));
 
     let hi = -Infinity;
     let lo = Infinity;
-    for (const candle of view) {
+    for (const time of view) {
+      const candle = candles.get(time);
+      if (!candle) continue;
       hi = Math.max(hi, candle.high);
       lo = Math.min(lo, candle.low);
     }
+    if (!Number.isFinite(hi)) return;
     const cushion = (hi - lo) * 0.08 || Math.max(hi * 0.0008, 1);
     hi += cushion;
     lo -= cushion;
-    const yOf = (price) => pad.top + ((hi - price) / (hi - lo)) * plotH;
+    const yPrice = (price) => priceTop + ((hi - price) / (hi - lo)) * priceH;
 
     ctx.font = "12px ui-sans-serif, system-ui, sans-serif";
     ctx.textBaseline = "middle";
-    const step = niceStep(hi - lo, Math.max(3, Math.floor(plotH / 72)));
+    const step = niceStep(hi - lo, Math.max(3, Math.floor(priceH / 72)));
     const firstTick = Math.ceil(lo / step) * step;
     ctx.strokeStyle = grid;
     ctx.lineWidth = 1;
     ctx.fillStyle = axis;
     ctx.textAlign = "left";
     for (let price = firstTick; price <= hi; price += step) {
-      const y = Math.round(yOf(price)) + 0.5;
+      const y = Math.round(yPrice(price)) + 0.5;
+      if (y < priceTop || y > priceTop + priceH) continue;
       ctx.beginPath();
       ctx.moveTo(pad.left, y);
       ctx.lineTo(pad.left + plotW, y);
       ctx.stroke();
-      ctx.fillText(formatPrice(price), pad.left + plotW + 8, yOf(price));
+      ctx.fillText(formatPrice(price), pad.left + plotW + 8, yPrice(price));
     }
 
-    const labelEvery = Math.max(1, Math.ceil(72 / slot));
-    const marks = [];
-    for (let i = 0; i < view.length; i += labelEvery) marks.push(i);
-    const lastIndex = view.length - 1;
-    if (marks[marks.length - 1] !== lastIndex) {
-      if (lastIndex - marks[marks.length - 1] < labelEvery * 0.55) marks[marks.length - 1] = lastIndex;
-      else marks.push(lastIndex);
-    }
-    ctx.textAlign = "center";
-    ctx.textBaseline = "top";
-    for (const i of marks) {
-      const x = originX + i * slot + slot / 2;
-      ctx.fillText(formatMinute(view[i].time).replace(" UTC", ""), x, pad.top + plotH + 8);
-    }
-
-    const last = view[view.length - 1];
-    const prev = view.length > 1 ? view[view.length - 2].close : last.open;
-    const lastUp = last.close >= prev;
-    const yLast = yOf(last.close);
+    const lastCandle = data[data.length - 1];
+    const prevClose = data.length > 1 ? data[data.length - 2].close : lastCandle.open;
+    const lastUp = lastCandle.close >= prevClose;
+    const yLast = yPrice(lastCandle.close);
     ctx.save();
     ctx.beginPath();
-    ctx.rect(pad.left, pad.top, plotW, plotH);
+    ctx.rect(pad.left, priceTop, plotW, priceH);
     ctx.clip();
     ctx.setLineDash([3, 4]);
     ctx.strokeStyle = lastUp ? up : down;
@@ -221,27 +265,27 @@ function upsert(candle, source) {
 
     const bodyW = Math.max(2, slot * 0.68);
     for (let i = 0; i < view.length; i++) {
-      const candle = view[i];
+      const candle = candles.get(view[i]);
+      if (!candle) continue;
       const x = originX + i * slot + slot / 2;
       const rising = candle.close >= candle.open;
       ctx.strokeStyle = rising ? up : down;
       ctx.fillStyle = rising ? up : down;
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(Math.round(x) + 0.5, yOf(candle.high));
-      ctx.lineTo(Math.round(x) + 0.5, yOf(candle.low));
+      ctx.moveTo(Math.round(x) + 0.5, yPrice(candle.high));
+      ctx.lineTo(Math.round(x) + 0.5, yPrice(candle.low));
       ctx.stroke();
-      const top = yOf(Math.max(candle.open, candle.close));
-      const bottom = yOf(Math.min(candle.open, candle.close));
-      const bodyH = Math.max(1, bottom - top);
-      ctx.fillRect(x - bodyW / 2, top, bodyW, bodyH);
+      const top = yPrice(Math.max(candle.open, candle.close));
+      const bottom = yPrice(Math.min(candle.open, candle.close));
+      ctx.fillRect(x - bodyW / 2, top, bodyW, Math.max(1, bottom - top));
     }
     ctx.restore();
 
-    const label = formatPrice(last.close);
+    const label = formatPrice(lastCandle.close);
     const tagW = Math.ceil(ctx.measureText(label).width) + 14;
     const tagH = 18;
-    const tagY = Math.min(pad.top + plotH - tagH, Math.max(pad.top, yLast - tagH / 2));
+    const tagY = Math.min(priceTop + priceH - tagH, Math.max(priceTop, yLast - tagH / 2));
     ctx.fillStyle = lastUp ? up : down;
     roundRect(pad.left + plotW + 4, tagY, tagW, tagH, 3);
     ctx.fill();
@@ -249,13 +293,109 @@ function upsert(candle, source) {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(label, pad.left + plotW + 4 + tagW / 2, tagY + tagH / 2);
+
+    drawFlow(view, originX, slot, bodyW, pad.left, plotW, flowTop, flowH);
+
+    const labelEvery = Math.max(1, Math.ceil(72 / slot));
+    const marks = [];
+    for (let i = 0; i < view.length; i += labelEvery) marks.push(i);
+    const lastIndex = view.length - 1;
+    if (marks[marks.length - 1] !== lastIndex) {
+      if (lastIndex - marks[marks.length - 1] < labelEvery * 0.55) marks[marks.length - 1] = lastIndex;
+      else marks.push(lastIndex);
+    }
+    ctx.fillStyle = axis;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    for (const i of marks) {
+      const x = originX + i * slot + slot / 2;
+      ctx.fillText(formatMinute(view[i]).replace(" UTC", ""), x, flowTop + flowH + 8);
+    }
+  }
+
+  function drawFlow(view, originX, slot, bodyW, left, plotW, flowTop, flowH) {
+    ctx.font = "12px ui-sans-serif, system-ui, sans-serif";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "bottom";
+    ctx.fillStyle = axis;
+    ctx.fillText("Order flow", left, flowTop - 4);
+    ctx.fillStyle = smaColor;
+    ctx.fillText("SMA 20", left + 96, flowTop - 4);
+
+    const rows = flowBars();
+    const byTime = new Map(rows.map((row) => [row.time, row]));
+    const visible = view.map((time) => byTime.get(time)).filter(Boolean);
+    if (!visible.length) {
+      ctx.fillStyle = axis;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(flowLoading ? "Loading order flow…" : "Waiting for trades…", left + plotW / 2, flowTop + flowH / 2);
+      return;
+    }
+
+    let peak = 0;
+    for (const row of visible) {
+      peak = Math.max(peak, Math.abs(row.delta), Math.abs(row.sma ?? 0));
+    }
+    peak = (peak || 1) * 1.12;
+    const y0 = flowTop + flowH / 2;
+    const yOf = (value) => y0 - (value / peak) * (flowH / 2);
+
+    ctx.strokeStyle = grid;
+    ctx.lineWidth = 1;
+    ctx.fillStyle = axis;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    const tick = niceStep(peak * 2, 3);
+    for (const value of [tick, 0, -tick]) {
+      if (Math.abs(value) > peak) continue;
+      const y = Math.round(yOf(value)) + 0.5;
+      ctx.beginPath();
+      ctx.moveTo(left, y);
+      ctx.lineTo(left + plotW, y);
+      ctx.stroke();
+      ctx.fillText(formatDelta(value), left + plotW + 8, yOf(value));
+    }
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(left, flowTop, plotW, flowH);
+    ctx.clip();
+    for (let i = 0; i < view.length; i++) {
+      const row = byTime.get(view[i]);
+      if (!row) continue;
+      const x = originX + i * slot + slot / 2;
+      const y = yOf(row.delta);
+      ctx.fillStyle = row.delta >= 0 ? up : down;
+      const top = Math.min(y, y0);
+      ctx.fillRect(x - bodyW / 2, top, bodyW, Math.max(1, Math.abs(y - y0)));
+    }
+    ctx.beginPath();
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = smaColor;
+    let started = false;
+    for (let i = 0; i < view.length; i++) {
+      const row = byTime.get(view[i]);
+      if (!row || row.sma == null) {
+        started = false;
+        continue;
+      }
+      const x = originX + i * slot + slot / 2;
+      const y = yOf(row.sma);
+      if (!started) {
+        ctx.moveTo(x, y);
+        started = true;
+      } else {
+        ctx.lineTo(x, y);
+      }
+    }
+    ctx.stroke();
+    ctx.restore();
   }
 
   async function loadHistory() {
-    // Spot OHLC allows a normal browser. The perpetual chart feed does not.
-    const url = "https://api.kraken.com/0/public/OHLC?pair=XBTUSD&interval=1";
     try {
-      const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      const response = await fetch(OHLC_URL, { signal: AbortSignal.timeout(8000) });
       if (!response.ok) throw new Error(`history ${response.status}`);
       const payload = await response.json();
       const rows = payload.result && payload.result.XXBTZUSD;
@@ -279,86 +419,65 @@ function upsert(candle, source) {
     }
   }
 
-  function applyWsCandle(raw) {
-    if (raw.symbol && raw.symbol !== SYMBOL) return;
-    if (raw.interval && Number(raw.interval) !== 1) return;
-    const candle = candleFrom(raw, parseTime(raw.interval_begin || raw.timestamp));
-    if (!candle) return;
-    upsert(candle, "ws");
-    emptyNote = "";
-    scheduleDraw();
+  function addTrades(rows) {
+    for (const row of rows) {
+      const id = row[6];
+      if (id != null) {
+        if (seenTrades.has(id)) continue;
+        seenTrades.add(id);
+      }
+      const volume = Number(row[1]);
+      const time = Number(row[2]);
+      const side = row[3];
+      if (!Number.isFinite(volume) || !Number.isFinite(time)) continue;
+      const sign = side === "b" ? 1 : side === "s" ? -1 : 0;
+      if (!sign) continue;
+      const minute = Math.floor(time / 60) * 60000;
+      flow.set(minute, (flow.get(minute) || 0) + sign * volume);
+    }
+    const cutoff = Date.now() - (HISTORY_MINUTES + 5) * 60000;
+    for (const minute of flow.keys()) {
+      if (minute < cutoff) flow.delete(minute);
+    }
   }
 
-  function clearTimers() {
-    clearInterval(pingTimer);
-    clearInterval(watchTimer);
-    pingTimer = 0;
-    watchTimer = 0;
-  }
-
-  function connect() {
-    if (socket && (socket.readyState === WebSocket.CONNECTING || socket.readyState === WebSocket.OPEN)) return;
-    setStatus("connecting", socket ? "Reconnecting" : "Connecting");
-    const ws = new WebSocket(WS_URL);
-    socket = ws;
-    ws.addEventListener("open", () => {
-      if (socket !== ws) return;
-      reconnectDelay = 1000;
-      lastMessageAt = Date.now();
-      ws.send(JSON.stringify({
-        method: "subscribe",
-        params: {
-          channel: "ohlc",
-          asset_class: "derivatives",
-          symbol: [SYMBOL],
-          interval: 1,
-          tick_type: "trade",
-          snapshot: true,
-        },
-      }));
-      clearTimers();
-      pingTimer = setInterval(() => {
-        if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ method: "ping" }));
-      }, 20000);
-      watchTimer = setInterval(() => {
-        if (Date.now() - lastMessageAt > 15000 && ws.readyState === WebSocket.OPEN) ws.close();
-      }, 5000);
-    });
-    ws.addEventListener("message", (event) => {
-      if (socket !== ws) return;
-      lastMessageAt = Date.now();
-      let message;
-      try {
-        message = JSON.parse(event.data);
-      } catch {
-        return;
+  async function loadFlow() {
+    if (flowLoading) return;
+    flowLoading = true;
+    try {
+      let since = flowCursor || `${Math.floor(Date.now() / 1000) - HISTORY_MINUTES * 60}000000000`;
+      const maxPages = flowCursor ? 4 : 40;
+      for (let page = 0; page < maxPages; page++) {
+        const response = await fetch(`${TRADES_URL}&since=${since}`, { signal: AbortSignal.timeout(8000) });
+        if (!response.ok) throw new Error(`trades ${response.status}`);
+        const payload = await response.json();
+        if (payload.error && payload.error.length) throw new Error(payload.error.join(", "));
+        const rows = payload.result && payload.result.XXBTZUSD;
+        const cursor = payload.result && payload.result.last;
+        if (!Array.isArray(rows) || !rows.length) {
+          if (cursor) flowCursor = String(cursor);
+          break;
+        }
+        addTrades(rows);
+        if (!cursor || String(cursor) === since) break;
+        flowCursor = String(cursor);
+        since = flowCursor;
+        scheduleDraw();
+        const lastTime = Number(rows[rows.length - 1][2]);
+        if (Number.isFinite(lastTime) && lastTime >= Date.now() / 1000 - 1) break;
       }
-      if (message.method === "ping") {
-        ws.send(JSON.stringify({ method: "pong", req_id: message.req_id }));
-        return;
-      }
-      if (message.method === "subscribe" && message.success && message.result?.channel === "ohlc") {
-        setStatus("connected", "Connected");
-      }
-      if (message.channel === "ohlc" && Array.isArray(message.data)) {
-        setStatus("connected", "Connected");
-        for (const raw of message.data) applyWsCandle(raw);
-      }
-    });
-    ws.addEventListener("close", () => {
-      if (socket !== ws) return;
-      clearTimers();
-      setStatus("disconnected", "Reconnecting");
-      const wait = reconnectDelay;
-      reconnectDelay = Math.min(reconnectDelay * 2, 15000);
-      setTimeout(connect, wait);
-    });
-    ws.addEventListener("error", () => {
-      if (socket === ws) ws.close();
-    });
+      scheduleDraw();
+    } catch (error) {
+      console.warn(error);
+      scheduleDraw();
+    } finally {
+      flowLoading = false;
+    }
   }
 
   new ResizeObserver(scheduleDraw).observe(canvas.parentElement);
   loadHistory();
+  loadFlow();
   setInterval(loadHistory, 2000);
+  setInterval(loadFlow, 2000);
 })();
